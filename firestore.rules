@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. DASHBOARD CONFIGURATION
+    match /dashboardConfig/{pageId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // 2. USERS
+    match /users/{userId} {
+      // User can manage their own doc
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Admins can read, update, and delete any user doc
+      allow read, update, delete: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+
+      // Admins can also create users
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    // 3. SETTINGS
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // 4. PRODUCTS / DEVICES
+    match /devices/{deviceId} {
+      allow read: if true;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // 5. INFLUENCER FOOTAGE
+    match /footage/{fileId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

@@ -1,0 +1,55 @@
+/* Add your CSS rules here */
+.conts{
+    /* padding-bottom: 40px; */
+    margin-bottom: 50px;
+}
+
+.home_heading{
+    text-align: center;
+    font-size: 35px;
+    font-weight: 700;
+    color: #0A372D;
+    margin-top: 40px;
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    background-color: #edf2f7; /* Use your desired background color */
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin: 0.5rem;
+}
+
+.tile-image {
+    height: 10rem; /* Adjust height as needed */
+    background-color: #cbd5e0; /* Use your desired background color */
+    border-radius: 0.5rem;
+}
+
+.tile-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 1rem;
+}
+
+.tile-heading {
+    font-size: 1.5rem; /* Adjust font size as needed */
+    font-weight: 600;
+}
+
+.tile-text {
+    font-size: 0.875rem; /* Adjust font size as needed */
+}
+
+.tile-link {
+    padding: 0.5rem 1rem; /* Adjust padding as needed */
+    border-radius: 0.25rem; /* Adjust border radius as needed */
+    font-weight: 500;
+    background-color: #cbd5e0; /* Use your desired background color */
+    font-size: 0.75rem; /* Adjust font size as needed */
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #2d3748; /* Use your desired text color */
+}

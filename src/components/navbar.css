@@ -1,0 +1,595 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+  padding: 0 15px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+
+}
+
+.navbar-left .logo {
+  color: #fff;
+  text-decoration: none;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.navbar-left {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #252222;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+  padding: 0 15px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+@media screen and (max-width: 768px) {
+  .navbar-left {
+    padding: 0 10px;
+  }
+}
+
+.navbar-left .logo {
+  color: #fff;
+  text-decoration: none;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.navbar-left {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+}
+
+.menu {
+  font-size: 40px;
+  color: #fff;
+}
+
+.navbar-right ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 10px;
+  display: flex;
+}
+
+.navbar-right li {
+  margin-left: 20px;
+}
+
+.navbar-right li a {
+  color: #ffff;
+  text-decoration: none;
+}
+
+.navbar-left .logo {
+  color: #fff;
+  text-decoration: none;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+}
+
+.menu {
+  font-size: 40px;
+  color: #fff;
+}
+
+.navbar-right ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 10px;
+  display: flex;
+}
+
+.navbar-right li {
+  margin-left: 20px;
+}
+
+.navbar-right li a {
+  color: #464646;
+  text-decoration: none;
+}
+
+/* 
+.search-container{
+  color: #ffff;
+background: #252222;
+height: 40px;
+width: 100%;
+border-radius: 30px;
+padding: 10px 20px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+cursor: pointer;
+transition: 0.8s;
+box-shadow: rgba(0, 0, 0, 0.4) 0px 2px 4px, rgba(0, 0, 0, 0.3) 0px 7px 13px -3px, rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+text-shadow: 2px 2px 3px rgba(255,255,255,0.5);
+transition: transform 0.3s ease;
+} */
+
+/* .search-container:hover{
+  transform: scale(1.1);
+} */
+
+
+
+/* .search-container .search-input{
+background: transparent;
+border: none;
+outline:none;
+width: 200px;
+font-weight: 500;
+font-size: 16px;
+transition: 0.8s;
+
+}
+
+
+.search-container .search-btn .fas{
+color: #5cbdbb;
+} */
+
+
+:root {
+  --accent-color: #fff;
+  --gradient-color: #FBFBFB;
+}
+
+/* 
+.sidebar{
+  position: fixed;
+  width: 255px;
+  left: -10px;
+  height: 100%;
+  background-color: #fff;
+  transition: all .5s ease;
+  }
+.sidebar header{
+font-size: 28px;
+color: #353535;
+line-height: 70px;
+text-align: center;
+background-color: #fff;
+user-select: none;
+font-family: 'Lato', sans-serif;
+}
+.sidebar a{
+display: block;
+
+width: 100%;
+color: #353535;
+line-height: 50px;
+padding-left: 30px;
+box-sizing: border-box;
+text-decoration: none;
+font-family: 'Lato', sans-serif;
+transition: all .5s ease;
+}
+ .navbar .sidebar .menu_links.active,.menu_links:hover{
+  border-left: 5px solid #ed1e1eb4;
+  color: #fff;
+  background: #7c7d7e;
+}
+
+
+.sidebar a i{
+font-size: 13px;
+margin-right: 16px;
+}
+.sidebar a span{
+font-size: 13px;
+letter-spacing: 1px;
+} */
+
+
+/* #check{
+display: none;
+}
+
+label #btn,label #cancel{
+position: absolute;
+left: 5px;
+cursor: pointer;
+color: #d6adff;
+border-radius: 5px;
+margin: 15px 30px;
+font-size: 29px;
+background-color: #e8d1ff;
+box-shadow:inset 2px 2px 2px 0px rgba(255,255,255,.5),
+inset -7px -7px 10px 0px rgba(0,0,0,.1),
+3.5px 3.5px 20px 0px rgba(0,0,0,.1),
+2px 2px 5px 0px rgba(0,0,0,.1);
+height: 45px;
+width: 45px;
+text-align: center;
+text-shadow: 2px 2px 3px rgba(255,255,255,0.5);
+line-height: 45px;
+transition: all .5s ease;
+}
+
+label #cancel{
+opacity: 0;
+visibility: hidden;
+}
+#check:checked ~ .sidebar{
+left: 0;
+}
+#check:checked ~ label #btn{
+margin-left: 245px;
+opacity: 0;
+visibility: hidden;
+}
+#check:checked ~ label #cancel{
+margin-left: 245px;
+opacity: 1;
+visibility: visible;
+}
+@media(max-width : 860px){
+.sidebar{
+height: auto;
+width: 70px;
+left: 0;
+margin: 100px 0;
+}
+header,#btn,#cancel{
+display: none;
+}
+span{
+position: absolute;
+margin-left: 23px;
+opacity: 0;
+visibility: hidden;
+}
+.sidebar a{
+height: 60px;
+
+}
+.sidebar a i{
+margin-left: -10px;
+}
+a:hover {
+width: 200px;
+background: inherit;
+}
+.sidebar a:hover span{
+opacity: 1;
+visibility: visible;
+}
+}
+
+.sidebar > a.active,.sidebar > a:hover:nth-child(even) {
+--accent-color: #52d6f4;
+--gradient-color: #c1b1f7;
+}
+.sidebar a.active,.sidebar > a:hover:nth-child(odd) {
+--accent-color: #c1b1f7;
+--gradient-color: #A890FE;
+}
+
+
+.frame {
+width: 50%;
+height: 30%;
+margin: auto;
+text-align: center;
+} */
+
+/* .BUtton{
+  background-color: #4a4a4a; 
+  border: none;
+  color: white;
+  border-radius: 10px;
+  padding: 5px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+}
+.BUtton:hover{
+  background-color: #807f7f;
+  box-shadow: rgba(67, 71, 85, 0.27) 0px 0px 0.25em, rgba(90, 125, 188, 0.05) 0px 0.25em 1em;
+} */
+
+
+/* ===== Sidebar Base Style ===== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: #000000;
+  color: #fff;
+  padding: 20px 15px;
+  overflow-y: auto;
+  transition: transform 0.3s ease-in-out;
+  z-index: 9999;
+}
+
+.sidebar .menu_links {
+  display: flex;
+  align-items: center;
+  padding: 12px 10px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 15px;
+  /* border-radius: 6px; */
+  transition: background 0.2s ease;
+}
+
+.sidebar .menu_links:hover {
+  background: rgba(255, 2, 2, 0.415);
+}
+
+/* Dropdown inside sidebar */
+.dropdown-content {
+  padding-left: 10px;
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-content a {
+  padding: 8px 0;
+  font-size: 14px;
+  color: #fff;
+}
+
+/* ===== Responsive ===== */
+
+/* Tablets (≤ 1024px) */
+@media screen and (max-width: 1024px) {
+  .sidebar {
+    width: 220px;
+    padding: 15px 10px;
+  }
+
+  .sidebar .menu_links {
+    font-size: 14px;
+    padding: 10px 8px;
+  }
+}
+
+/* Mobile (≤ 768px) */
+@media screen and (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 75%;
+    max-width: 300px;
+    height: 100vh;
+    background: #111;
+    transition: left 0.3s ease-in-out;
+  }
+
+  /* Show sidebar when active */
+  .sidebar.open {
+    left: 0;
+  }
+
+  .sidebar .menu_links {
+    font-size: 14px;
+    padding: 10px;
+  }
+}
+
+/* Small mobile (≤ 480px) */
+@media screen and (max-width: 480px) {
+  .sidebar {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .sidebar .menu_links {
+    font-size: 13px;
+    padding: 12px;
+  }
+}
+
+
+/* Hide desktop hover sidebar icon on tablets and mobile */
+@media screen and (max-width: 1024px) {
+
+  /* The first div inside navbar-left is your desktop hover menu */
+  .navbar-left>div:first-child {
+    display: none;
+  }
+}
+
+
+
+
+/* Mobile & Tablet sidebar text fix */
+@media screen and (max-width: 1024px) {
+  .sidebar a span {
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: relative !important;
+    margin-left: 10px !important;
+  }
+}
+
+
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -260px;
+  width: 260px;
+  height: 100vh;
+  background: #111;
+  color: #fff;
+  padding: 20px 15px;
+  overflow-y: auto;
+  transition: left 0.3s ease-in-out;
+  z-index: 9999;
+}
+
+/* When open, show it */
+.sidebar.open {
+  left: 0;
+}
+
+
+/* Default (desktop) → sidebar starts below navbar */
+.sidebar {
+  position: fixed;
+  top: 0px;
+  left: -260px;
+  width: 260px;
+  height: calc(100vh - 60px);
+  color: #fff;
+  padding: 20px 15px;
+  overflow-y: auto;
+  transition: left 0.3s ease-in-out;
+  z-index: 998;
+}
+
+/* When sidebar is opened */
+.sidebar.open {
+  left: 0;
+}
+
+/* Mobile & Tablet → sidebar covers full screen, including navbar */
+@media screen and (max-width: 1024px) {
+  .sidebar {
+    top: 0px;
+    height: 100vh;
+  }
+}
+
+.admin-panel-btn {
+  background-color: #c21b29;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.admin-panel-btn:hover {
+  background-color: #a01622;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.admin-panel-btn:active {
+  transform: translateY(0);
+}
+
+.service-panel-btn {
+  background-color: #1a1a1a;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #c21b29;
+  transition: all 0.2s ease;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.service-panel-btn:hover {
+  background-color: #c21b29;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(194, 27, 41, 0.3);
+}
+
+.service-panel-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive Hide for Header Admin Button */
+@media screen and (max-width: 768px) {
+  .navbar .admin-panel-btn {
+    display: none;
+  }
+
+  /* Sidebar admin link should be visible */
+  .sidebar-admin-link {
+    display: flex !important;
+  }
+}
+
+/* Ensure sidebar admin link is hidden by default in desktop if needed, 
+   but since it's inside sidebar which is hidden, it's fine. 
+   However, we might want to hide it in desktop sidebar if it's redundant. */
+@media screen and (min-width: 769px) {
+  .sidebar-admin-link {
+    display: none !important;
+  }
+}
+
+.navbar-text-link {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+}
+
+.navbar-text-link:hover {
+  color: #c21b29;
+  text-decoration: none;
+}
+
+/* Responsive fixes for all navbars */
+@media screen and (max-width: 768px) {
+
+  /* Hide specific header items that are moved to sidebar */
+  .header-admin-item,
+  .header-service-item,
+  .navbar .admin-panel-btn {
+    display: none !important;
+  }
+
+  /* Style Admin Panel in sidebar as a button */
+  .sidebar-admin-link {
+    background-color: #c21b29 !important;
+    color: #fff !important;
+    margin: 15px 10px !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    justify-content: center !important;
+    font-weight: bold !important;
+    box-shadow: 0 4px 10px rgba(194, 27, 41, 0.3);
+    transition: all 0.2s ease !important;
+  }
+
+  .sidebar-admin-link:hover {
+    background-color: #a01622 !important;
+    transform: translateY(-2px);
+  }
+
+  .sidebar-admin-link:active {
+    transform: translateY(0);
+  }
+}

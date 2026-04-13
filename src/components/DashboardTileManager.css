@@ -1,0 +1,411 @@
+/* DashboardTileManager.css */
+.dtm-container {
+    padding: 20px;
+    font-family: 'Segoe UI', sans-serif;
+    color: #222;
+}
+
+.dtm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.dtm-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.dtm-header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.dtm-save-btn {
+    background: #1a6fc4;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.dtm-seed-btn {
+    background: #555;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.dtm-page-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.dtm-page-selector-label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.dtm-page-select {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1.5px solid #ccc;
+    font-size: 14px;
+    min-width: 240px;
+}
+
+.dtm-section-box {
+    background: #f7f7f7;
+    border: 1.5px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.dtm-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.dtm-section-title-input {
+    font-size: 17px;
+    font-weight: 700;
+    border: none;
+    border-bottom: 2px solid #1a6fc4;
+    background: transparent;
+    outline: none;
+    padding: 4px 0;
+    flex: 1;
+    min-width: 180px;
+}
+
+.dtm-section-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: auto;
+}
+
+.dtm-tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.dtm-tile-card {
+    background: #fff;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 14px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+}
+
+.dtm-is-child {
+    border: 1px solid #aac4f5;
+    background: #fdfdff;
+    margin-bottom: 10px;
+}
+
+.dtm-parent-context {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    background: #eef4ff;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    border-left: 3px solid #1a6fc4;
+}
+
+.dtm-parent-context span {
+    font-size: 11px;
+    color: #444;
+}
+
+.dtm-parent-context strong {
+    color: #1a6fc4;
+}
+
+.dtm-tile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.dtm-tile-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.dtm-tile-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.dtm-form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.dtm-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    width: 72px;
+    flex-shrink: 0;
+}
+
+.dtm-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1.5px solid #ddd;
+    border-radius: 5px;
+    font-size: 13px;
+    outline: none;
+    min-width: 0;
+}
+
+.dtm-select {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1.5px solid #ddd;
+    border-radius: 5px;
+    font-size: 13px;
+    background: #fff;
+}
+
+.dtm-preview {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.dtm-upload-label {
+    background: #e8f0fe;
+    color: #1a6fc4;
+    border: 1px solid #aac4f5;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.dtm-move-btn {
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.dtm-delete-sm-btn {
+    background: #fef0f0;
+    color: #c0392b;
+    border: 1px solid #f5c6c6;
+    border-radius: 4px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dtm-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.dtm-bread-item {
+    font-size: 13px;
+    color: #666;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.dtm-bread-item:hover {
+    color: #1a6fc4;
+    text-decoration: underline;
+}
+
+.dtm-bread-item.active {
+    color: #1a6fc4;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+.dtm-bread-sep {
+    color: #ccc;
+    font-size: 12px;
+}
+
+.dtm-back-btn {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dtm-back-btn:hover {
+    background: #e2e8f0;
+}
+
+.dtm-manage-nested-btn {
+    background: #f0f7ff;
+    color: #1a6fc4;
+    border: 1.5px solid #aac4f5;
+    border-radius: 6px;
+    padding: 10px;
+    width: 100%;
+    text-align: center;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dtm-manage-nested-btn:hover {
+    background: #e1efff;
+    border-color: #1a6fc4;
+}
+
+.dtm-nested-parent {
+    border-left: 4px solid #1a6fc4;
+}
+
+.dtm-add-tile-btn {
+    background: #e8f0fe;
+    color: #1a6fc4;
+    border: 1.5px dashed #aac4f5;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.dtm-add-section-btn {
+    background: #1a6fc4;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    display: block;
+    margin: 8px 0 0;
+}
+
+.dtm-empty-state {
+    background: #fff9e6;
+    border: 1.5px dashed #f0c040;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    color: #7a6000;
+    margin-bottom: 24px;
+}
+
+/* ─── Responsive Queries ──────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+    .dtm-container {
+        padding: 10px;
+    }
+
+    .dtm-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .dtm-header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .dtm-save-btn,
+    .dtm-seed-btn {
+        flex: 1;
+        text-align: center;
+        padding: 12px 10px;
+    }
+
+    .dtm-page-selector {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .dtm-page-select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .dtm-section-box {
+        padding: 12px;
+    }
+
+    .dtm-tiles-grid {
+        grid-template-columns: 1fr;
+        /* Stack tiles on mobile */
+    }
+
+    .dtm-label {
+        width: 100%;
+        margin-bottom: 4px;
+    }
+
+    .dtm-input,
+    .dtm-select {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .dtm-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dtm-section-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }
+}

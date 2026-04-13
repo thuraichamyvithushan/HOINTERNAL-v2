@@ -1,0 +1,461 @@
+.service-page {
+    background-color: #030712;
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #ffffff;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+/* Modern Service Cards */
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 3rem;
+    padding: 3rem 0 6rem 0;
+}
+
+.service-card-modern {
+    background: #111827;
+    border-radius: 2rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+}
+
+.service-card-modern:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.service-card-image-wrap {
+    height: 260px;
+    position: relative;
+    overflow: hidden;
+}
+
+.service-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 1.2s ease;
+}
+
+.service-card-modern:hover .service-card-img {
+    transform: scale(1.15);
+}
+
+.service-card-icon-overlay {
+    position: absolute;
+    bottom: -28px;
+    right: 35px;
+    width: 65px;
+    height: 65px;
+    background: #ef4444;
+    color: white;
+    border-radius: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    box-shadow: 0 15px 30px rgba(239, 68, 68, 0.4);
+    z-index: 2;
+    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.service-card-modern:hover .service-card-icon-overlay {
+    transform: rotate(12deg) scale(1.1);
+    background: #dc2626;
+    box-shadow: 0 20px 40px rgba(220, 38, 38, 0.5);
+}
+
+.service-card-content {
+    padding: 2.25rem 2.5rem 3rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.service-header-modern h3 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.3;
+    min-height: 3.5rem;
+    /* Ensures titles align perfectly */
+    display: flex;
+    align-items: center;
+}
+
+.service-desc-modern {
+    color: #9ca3af;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+    min-height: 150px;
+    /* Increased to handle multi-line variations */
+}
+
+.service-details-modern {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.service-details-modern li {
+    padding-left: 2rem;
+    position: relative;
+    color: #d1d5db;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.service-details-modern li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: #ef4444;
+    font-weight: 900;
+}
+
+/* Updated CTA Section */
+.service-cta {
+    background: linear-gradient(to bottom, #030712, #111827);
+    padding: 120px 20px;
+    text-align: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cta-content h2 {
+    font-size: 3.5rem;
+    font-weight: 900;
+    background: linear-gradient(to right, #ffffff, #ef4444);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1.5rem;
+}
+
+.cta-content p {
+    color: #9ca3af;
+    font-size: 1.25rem;
+    max-width: 600px;
+    margin: 0 auto 3rem;
+    line-height: 1.7;
+}
+
+.cta-buttons-modern {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.cta-button-modern {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2.5rem;
+    border-radius: 6rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    border: none;
+    outline: none;
+}
+
+.btn-icon {
+    font-size: 1.1rem;
+}
+
+.call-btn-modern {
+    background: rgba(255, 255, 255, 0.03);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.call-btn-modern:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: white;
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+}
+
+.request-btn-modern {
+    background: #ef4444;
+    color: white;
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+}
+
+.request-btn-modern:hover {
+    background: #dc2626;
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(220, 38, 38, 0.4);
+}
+
+/* Modal Form Styles */
+.form-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    backdrop-filter: blur(5px);
+}
+
+.form-modal-content {
+    background: white;
+    width: 100%;
+    max-width: 600px;
+    border-radius: 20px;
+    padding: 40px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.close-modal {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: #888;
+    line-height: 1;
+}
+
+.form-modal-content h2 {
+    color: #c21b29;
+    margin-bottom: 10px;
+    font-size: 2rem;
+}
+
+.form-modal-content p {
+    color: #666;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #eee;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #c21b29;
+    outline: none;
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.submit-form-btn {
+    background: #c21b29;
+    color: white;
+    width: 100%;
+    padding: 15px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 10px;
+}
+
+.submit-form-btn:hover {
+    background: #90141f;
+}
+
+.form-success {
+    text-align: center;
+    padding: 40px 0;
+}
+
+.success-icon {
+    width: 80px;
+    height: 80px;
+    background: #4caf50;
+    color: white;
+    font-size: 3rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    animation: scaleIn 0.5s ease;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0);
+    }
+
+    to {
+        transform: scale(1);
+    }
+}
+
+.animate-up {
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stagger animation for cards */
+.service-card-modern:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.service-card-modern:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.service-card-modern:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.service-card-modern:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.service-card-modern:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+.service-card-modern:nth-child(6) {
+    animation-delay: 0.6s;
+}
+
+@media (max-width: 1024px) {
+    .services-grid {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .services-grid {
+        grid-template-columns: 1fr;
+        padding: 2rem 1rem;
+        gap: 1.5rem;
+    }
+
+    .service-card-modern {
+        border-radius: 1.25rem;
+    }
+
+    .service-card-image-wrap {
+        height: 180px;
+    }
+
+    .service-card-content {
+        padding: 1.5rem 1.25rem;
+    }
+
+    .service-header-modern h3 {
+        font-size: 1.2rem;
+        min-height: auto;
+        margin-bottom: 1rem;
+    }
+
+    .service-desc-modern {
+        font-size: 0.95rem;
+        min-height: auto;
+        margin-bottom: 1.25rem;
+    }
+
+    .service-details-modern li {
+        font-size: 0.9rem;
+    }
+
+    .cta-content h2 {
+        font-size: 2rem;
+    }
+
+    .cta-content p {
+        font-size: 1.05rem;
+        margin-bottom: 2rem;
+    }
+
+    .cta-buttons-modern {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .cta-button-modern {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .container {
+        padding: 0 1rem;
+    }
+
+    .service-cta {
+        padding: 60px 1rem;
+    }
+}
