@@ -35,8 +35,7 @@ const bucket = admin.storage().bucket();
 const app = express();
 const allowedOrigins = [
     'http://localhost:3000',
-    'https://ho-internal-18gh.vercel.app',
-    'https://ho-internal.vercel.app',
+    'https://hointernal-v2.vercel.app',
     process.env.ALLOWED_ORIGIN
 ].filter(Boolean);
 
