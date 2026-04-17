@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import UploadFootageNZ from './UploadFootageNZ';
 import ViewFootageNZ from './ViewFootageNZ';
+import AdminPrivateVideosNZ from './AdminPrivateVideosNZ';
 import InfluencerSummaryNZ from './InfluencerSummaryNZ';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faPlus } from '@fortawesome/free-solid-svg-icons';
@@ -10,91 +11,104 @@ import { useNavigate } from 'react-router-dom';
 import './InfluencerDashboardNZ.css';
 
 const DashboardNZ = () => {
-    const { user } = useContext(AuthContext);
-    const [showUploadModal, setShowUploadModal] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const navigate = useNavigate();
 
-    const handleRefresh = () => {
-        setRefreshTrigger(prev => prev + 1);
-    };
+  const handleRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
 
-    const handleLogout = () => {
-        auth.signOut();
-        navigate('/');
-    };
+  const handleLogout = () => {
+    auth.signOut();
+    navigate('/');
+  };
 
-    return (
-        <div className="single-page-dashboard min-h-screen bg-gray-900 border-none">
-            {/* Top Navbar */}
-            <header className="top-navbar shadow-lg">
-                <div className="logo-section">
-                    <h2 className="sidebar-title">
-                        <FontAwesomeIcon icon={faChartLine} />
-                        NZ Influencer Hub
-                    </h2>
-                </div>
+  return (
+    <div className="single-page-dashboard min-h-screen bg-gray-900 border-none">
+      {/* Top Navbar */}
+      <header className="top-navbar shadow-lg">
+        <div className="logo-section">
+          <h2 className="sidebar-title">
+            <FontAwesomeIcon icon={faChartLine} />
+            NZ Influencer Hub
+          </h2>
+        </div>
 
-                <div className="user-profile">
-                    <button
-                        onClick={() => setShowUploadModal(true)}
-                        className="add-footage-btn"
-                    >
-                        <FontAwesomeIcon icon={faPlus} />
-                        <span>Add Footage</span>
-                    </button>
-                </div>
-            </header>
+        <div className="user-profile">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="add-footage-btn"
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            <span>Add Footage</span>
+          </button>
+        </div>
+      </header>
 
-            {/* Main Grid Section */}
-            <main className="dashboard-main-view">
-                <div className="full-width-section dashboard-section-gap">
-                    <div className="section-divider divider-gap">
-                        <span className="divider-text">Private Storage (NZ)</span>
-                    </div>
-                    <div className="tile-header-simple flex justify-between items-center header-gap">
-                        <h2 className="section-heading">My Private clips</h2>
-                    </div>
-                    <div className="view-grid-wrapper">
-                        <ViewFootageNZ visibilityFilter="private" refreshTrigger={refreshTrigger} />
-                    </div>
-                </div>
+      {/* Main Grid Section */}
+      <main className="dashboard-main-view">
+        <div className="full-width-section dashboard-section-gap">
+          <div className="section-divider divider-gap">
+            <span className="divider-text">Private Storage (NZ)</span>
+          </div>
+          <div className="tile-header-simple flex justify-between items-center header-gap">
+            <h2 className="section-heading">my clips</h2>
+          </div>
+          <div className="view-grid-wrapper">
+            <ViewFootageNZ visibilityFilter="private" refreshTrigger={refreshTrigger} />
+          </div>
+        </div>
 
-                {/* Section 2: Global Footage Feed */}
-                <div className="full-width-section dashboard-section-gap">
-                    <div className="section-divider divider-gap">
-                        <span className="divider-text">NZ Collective Network Feed</span>
-                    </div>
-                    <div className="tile-header-simple flex justify-between items-center header-gap">
-                        <h2 className="section-heading">Public Network Footage</h2>
-                    </div>
-                    <div className="view-grid-wrapper">
-                        <ViewFootageNZ isGlobal={true} visibilityFilter="public" refreshTrigger={refreshTrigger} />
-                    </div>
-                </div>
+        {/* Admin Section: View Users Private Videos */}
+        {user?.role === 'admin' && (
+          <div className="full-width-section dashboard-section-gap">
+            <div className="section-divider divider-gap">
+              <span className="divider-text">Admin Control Panel (NZ)</span>
+            </div>
+            <div className="tile-header-simple flex justify-between items-center header-gap">
+              <h2 className="section-heading">Influencer Private Footage</h2>
+            </div>
+            <AdminPrivateVideosNZ />
+          </div>
+        )}
 
-                {/* Section 3: Influencer Summary */}
-                <div className="summary-section dashboard-section-gap">
-                    <div className="section-divider divider-gap">
-                        <span className="divider-text">NZ Influencer Network Activity</span>
-                    </div>
-                    <InfluencerSummaryNZ />
-                </div>
-            </main>
+        {/* Section 2: Global Footage Feed */}
+        <div className="full-width-section dashboard-section-gap">
+          <div className="section-divider divider-gap">
+            <span className="divider-text">NZ Collective Network Feed</span>
+          </div>
+          <div className="tile-header-simple flex justify-between items-center header-gap">
+            <h2 className="section-heading">shared ambassador footage</h2>
+          </div>
+          <div className="view-grid-wrapper">
+            <ViewFootageNZ isGlobal={true} visibilityFilter="public" refreshTrigger={refreshTrigger} />
+          </div>
+        </div>
 
-            {/* Upload Modal */}
-            {showUploadModal && (
-                <div className="modal-overlay animate-fade-in" onClick={() => setShowUploadModal(false)}>
-                    <div className="modal-content upload-modal-content" onClick={e => e.stopPropagation()}>
-                        <button className="modal-close-btn" onClick={() => setShowUploadModal(false)}>&times;</button>
-                        <div className="modal-inner-scroll custom-scrollbar">
-                            <UploadFootageNZ onComplete={() => { setShowUploadModal(false); handleRefresh(); }} />
-                        </div>
-                    </div>
-                </div>
-            )}
+        {/* Section 3: Influencer Summary */}
+        <div className="summary-section dashboard-section-gap">
+          <div className="section-divider divider-gap">
+            <span className="divider-text">NZ Influencer Network Activity</span>
+          </div>
+          <InfluencerSummaryNZ />
+        </div>
+      </main>
 
-            <style>{`
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="modal-overlay animate-fade-in" onClick={() => setShowUploadModal(false)}>
+          <div className="modal-content upload-modal-content" onClick={e => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setShowUploadModal(false)}>&times;</button>
+            <div className="modal-inner-scroll custom-scrollbar">
+              <UploadFootageNZ onComplete={() => { setShowUploadModal(false); handleRefresh(); }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
         .single-page-dashboard {
           background-color: #111827;
           color: white;
@@ -197,8 +211,8 @@ const DashboardNZ = () => {
           }
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 };
 
 export default DashboardNZ;

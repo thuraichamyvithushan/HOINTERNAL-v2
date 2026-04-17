@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import UploadFootage from './UploadFootage';
 import ViewFootage from './ViewFootage';
+import AdminPrivateVideos from './AdminPrivateVideos';
 import InfluencerSummary from './InfluencerSummary';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, faSignOutAlt, faPlus } from '@fortawesome/free-solid-svg-icons';
@@ -53,12 +54,25 @@ const Dashboard = () => {
             <span className="divider-text">Private Storage</span>
           </div>
           <div className="tile-header-simple flex justify-between items-center header-gap">
-            <h2 className="section-heading">My Private clips</h2>
+            <h2 className="section-heading">my clips</h2>
           </div>
           <div className="view-grid-wrapper">
             <ViewFootage visibilityFilter="private" refreshTrigger={refreshTrigger} />
           </div>
         </div>
+
+        {/* Admin Section: View Users Private Videos */}
+        {user?.role === 'admin' && (
+          <div className="full-width-section dashboard-section-gap">
+            <div className="section-divider divider-gap">
+              <span className="divider-text">Admin Control Panel</span>
+            </div>
+            <div className="tile-header-simple flex justify-between items-center header-gap">
+              <h2 className="section-heading">Influencer Private Footage</h2>
+            </div>
+            <AdminPrivateVideos />
+          </div>
+        )}
 
         {/* Section 2: Global Footage Feed */}
         <div className="full-width-section dashboard-section-gap">
@@ -66,7 +80,7 @@ const Dashboard = () => {
             <span className="divider-text">Collective Network Feed</span>
           </div>
           <div className="tile-header-simple flex justify-between items-center header-gap">
-            <h2 className="section-heading">Public Network Footage</h2>
+            <h2 className="section-heading">shared ambassador footage</h2>
           </div>
           <div className="view-grid-wrapper">
             <ViewFootage isGlobal={true} visibilityFilter="public" refreshTrigger={refreshTrigger} />

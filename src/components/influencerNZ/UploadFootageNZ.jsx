@@ -20,6 +20,14 @@ const UploadFootageNZ = (props) => {
     const [visibility, setVisibility] = useState('public');
     const [uploading, setUploading] = useState(false);
     const [deviceOptions, setDeviceOptions] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+
+    const nzAnimalOptionsList = [
+        "Red Deer/Stag", "Himalayan Tahr", "Alpine Chamois", "Fallow Deer",
+        "Sika Deer", "Wapiti/Elk", "Sambar Deer", "Rusa Deer", "Whitetail Deer",
+        "Wild Pigs (Boar)", "Wild Goats", "Rams", "Wallabies", "Hares",
+        "Rabbits", "Possums"
+    ];
 
     React.useEffect(() => {
         const fetchDevices = async () => {
@@ -155,16 +163,65 @@ const UploadFootageNZ = (props) => {
                         </select>
                     </div>
 
-                    <div className="form-group">
+                    <div className="form-group" style={{ position: 'relative' }}>
                         <label className="label">Species / Animals</label>
                         <input
                             type="text"
                             value={species}
-                            onChange={(e) => setSpecies(e.target.value)}
+                            onChange={(e) => {
+                                setSpecies(e.target.value);
+                                setShowDropdown(true);
+                            }}
+                            onFocus={() => setShowDropdown(true)}
+                            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                             className="input"
-                            placeholder="E.g. Tahr, Chamois, Red Deer"
+                            placeholder="Type to search animals..."
                             disabled={uploading}
+                            autoComplete="off"
                         />
+                        {showDropdown && species.trim() && nzAnimalOptionsList.filter(a => a.toLowerCase().includes(species.toLowerCase())).length > 0 && (
+                            <ul style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                zIndex: 50,
+                                backgroundColor: '#1f2937',
+                                border: '1px solid #374151',
+                                borderRadius: '0.375rem',
+                                marginTop: '0.25rem',
+                                maxHeight: '200px',
+                                overflowY: 'auto',
+                                listStyle: 'none',
+                                padding: 0,
+                                margin: 0,
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+                            }}>
+                                {nzAnimalOptionsList
+                                    .filter(a => a.toLowerCase().includes(species.toLowerCase()))
+                                    .map((animal, i) => (
+                                        <li
+                                            key={i}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                setSpecies(animal);
+                                                setShowDropdown(false);
+                                            }}
+                                            style={{
+                                                padding: '8px 12px',
+                                                cursor: 'pointer',
+                                                borderBottom: '1px solid #374151',
+                                                color: '#f3f4f6',
+                                                fontSize: '0.9rem'
+                                            }}
+                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#374151'}
+                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                        >
+                                            {animal}
+                                        </li>
+                                    ))}
+                            </ul>
+                        )}
                     </div>
 
                     <div className="form-group">
@@ -248,7 +305,7 @@ const UploadFootageNZ = (props) => {
                                 className={`visibility-btn public-btn ${visibility === 'public' ? 'active' : ''}`}
                                 onClick={() => setVisibility('public')}
                             >
-                                <span className="btn-label-main">Network Public</span>
+                                <span className="btn-label-main">shared ambassador footage</span>
                                 <span className="btn-label-sub">Collective NZ Feed</span>
                             </button>
                             <button
@@ -256,7 +313,7 @@ const UploadFootageNZ = (props) => {
                                 className={`visibility-btn private-btn ${visibility === 'private' ? 'active' : ''}`}
                                 onClick={() => setVisibility('private')}
                             >
-                                <span className="btn-label-main">Personal Private</span>
+                                <span className="btn-label-main">my clips</span>
                                 <span className="btn-label-sub">Hidden from others</span>
                             </button>
                         </div>

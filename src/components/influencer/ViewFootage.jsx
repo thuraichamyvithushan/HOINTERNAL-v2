@@ -7,7 +7,7 @@ import { faSearch, faPlay, faClock, faMicrochip, faVideoSlash, faLocationDot, fa
 import { API_URL } from '../../config';
 import './InfluencerDashboard.css';
 
-const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger = 0 }) => {
+const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger = 0, overrideUserId = null }) => {
     const { user } = useContext(AuthContext);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -26,11 +26,11 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
     });
 
     const fetchFootage = async () => {
-        if (!user && !isGlobal) return;
+        if (!user) return; // Users must be logged in to view any footage
         try {
             let url = isGlobal
                 ? `${API_URL}/api/footage/all?region=AU`
-                : `${API_URL}/api/footage/${user.uid}`;
+                : `${API_URL}/api/footage/${overrideUserId || user.uid}`;
 
             if (visibilityFilter) {
                 const separator = url.includes('?') ? '&' : '?';
@@ -84,7 +84,7 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
     };
 
     useEffect(() => {
-        if (!user && !isGlobal) return;
+        if (!user) return;
         fetchFootage();
         setCurrentPage(1); // Reset to first page on filter/refresh change
 

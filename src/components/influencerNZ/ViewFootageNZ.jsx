@@ -6,7 +6,7 @@ import { faSearch, faPlay, faClock, faMicrochip, faVideoSlash, faLocationDot, fa
 import { API_URL } from '../../config';
 import './InfluencerDashboardNZ.css';
 
-const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigger = 0 }) => {
+const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigger = 0, overrideUserId = null }) => {
     const { user } = useContext(AuthContext);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -31,11 +31,11 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
     ];
 
     const fetchFootage = async () => {
-        if (!user && !isGlobal) return;
+        if (!user) return;
         try {
             let url = isGlobal
                 ? `${API_URL}/api/footage/all?region=NZ`
-                : `${API_URL}/api/footage/${user.uid}`;
+                : `${API_URL}/api/footage/${overrideUserId || user.uid}`;
 
             if (visibilityFilter) {
                 const separator = url.includes('?') ? '&' : '?';
@@ -80,7 +80,7 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
     };
 
     useEffect(() => {
-        if (!user && !isGlobal) return;
+        if (!user) return;
         fetchFootage();
         const intervalId = setInterval(fetchFootage, 15000);
         return () => clearInterval(intervalId);
