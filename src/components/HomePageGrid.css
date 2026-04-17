@@ -188,41 +188,59 @@ h4 {
   /* Let the card/link be the direct child for Grid layout */
 }
 
-/* Ensure links don't mess up the grid */
-.dashboard-tile-col>a,
-.dashboard-tile-col>Link {
+/* Ensure links don't mess up the grid and have no underlines */
+.dashboard-tile-card a,
+.dashboard-tile-card a:hover,
+.dashboard-tile-card a:visited {
   display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
   justify-content: center !important;
+  text-decoration: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  color: inherit !important;
+}
+
+.dashboard-tile-card a h4 {
   text-decoration: none !important;
 }
 
-/* Rigid CSS Grid System - Forced 6 per row on Desktop */
+/* Flexible Centering System - Adjusted for smaller gaps */
 .home_row {
-  display: grid !important;
-  gap: 20px !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  /* Reduced from 20px */
   justify-content: center !important;
-  padding: 20px 0 !important;
+  padding: 15px 0 !important;
   width: 100% !important;
 }
 
-/* Desktop: Exact 6 tiles per row */
+/* Desktop: Max width to keep ~6 per row (190px * 6 + 12px * 5) */
 @media (min-width: 1300px) {
   .home_row {
-    grid-template-columns: repeat(6, 190px) !important;
+    max-width: 1200px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 }
 
-/* Large Tablet/Laptop: 4 tiles per row */
+/* Large Tablet/Laptop: Max width for ~4 per row */
 @media (max-width: 1299px) and (min-width: 1000px) {
   .home_row {
-    grid-template-columns: repeat(4, 190px) !important;
+    max-width: 796px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 }
 
-/* Tablet: 3 tiles per row */
+/* Tablet: Max width for ~3 per row */
 @media (max-width: 999px) and (min-width: 650px) {
   .home_row {
-    grid-template-columns: repeat(3, 190px) !important;
+    max-width: 594px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 }
 
@@ -253,29 +271,32 @@ h4 {
   .dashboard-tile-card {
     width: 100% !important;
     height: auto !important;
-    /* Allow height to adjust */
-    min-height: 120px !important;
-    padding: 15px !important;
+    min-height: 160px !important;
+    /* Slightly taller for vertical stack */
+    padding: 20px !important;
     border-radius: 12px !important;
-    flex-direction: row !important;
-    /* Horizontal layout for 1-column mobile? */
-    justify-content: flex-start !important;
-    gap: 15px !important;
+    flex-direction: column !important;
+    /* Vertical stack for better centering */
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 12px !important;
   }
 
   .dashboard-tile-card .image-container {
-    width: 60px !important;
-    height: 60px !important;
-    padding: 8px !important;
-    margin-bottom: 0 !important;
-    /* No margin-bottom since it's row layout */
+    width: 80px !important;
+    height: 80px !important;
+    padding: 10px !important;
+    margin-bottom: 8px !important;
     flex-shrink: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 
   .dashboard-tile-card h4 {
-    font-size: 14px !important;
+    font-size: 15px !important;
     height: auto !important;
-    text-align: left !important;
+    text-align: center !important;
+    /* Center text on mobile */
     margin: 0 !important;
     line-clamp: 2 !important;
   }
@@ -301,7 +322,6 @@ h4 {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   cursor: pointer;
-  margin: 0 auto !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
   position: relative;
@@ -319,6 +339,8 @@ h4 {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   margin-bottom: 12px !important;
   background: #f8fafc !important;
   border-radius: 12px !important;
