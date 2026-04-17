@@ -33,28 +33,41 @@ const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
 const app = express();
+
 const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:5173',
     'https://hointernal-v2.vercel.app',
+    'https://hointernal.com',
+    'https://www.hointernal.com',
     process.env.ALLOWED_ORIGIN
 ].filter(Boolean);
+
+// 1. IMPORTANT: CORS must be the absolute FIRST middleware
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+            callback(null, true);
+        } else {
+            console.log("CORS blocked origin:", origin);
+            // Instead of error, we can allow for now to debug or strictly block
+            callback(null, true); // Temporarily allow all for debugging or use strict: callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    credentials: true,
+    optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+}));
+
+app.use(express.json());
 
 // Root Endpoint for Vercel Browser Testing
 app.get('/', (req, res) => {
     res.status(200).send('Huntsman Optics Backend is Live and Running!');
-});
-
-app.use(cors({
-    origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(express.json());
-
-// Log every incoming request so you can see it working!
-app.use((req, res, next) => {
-    console.log(`[${new Date().toLocaleTimeString()}] incoming request: ${req.method} ${req.url}`);
-    next();
 });
 
 // Healthcheck Endpoint for Deployment Monitoring
