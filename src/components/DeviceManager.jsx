@@ -10,6 +10,8 @@ const DeviceManager = () => {
     const [devices, setDevices] = useState([]);
     const [newDevice, setNewDevice] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const productsPerPage = 6;
 
     const docRef = doc(firestore, 'settings', 'deviceOptions');
 
@@ -70,10 +72,43 @@ const DeviceManager = () => {
             await setDoc(docRef, { devices: updatedDevices }, { merge: true });
             setDevices(updatedDevices);
             toast.success("Device removed successfully!");
+
+            // Adjust current page if this was the last item on the page
+            const totalPages = Math.ceil(updatedDevices.length / productsPerPage);
+            if (currentPage > totalPages && totalPages > 0) {
+                setCurrentPage(totalPages);
+            }
         } catch (error) {
             console.error("Error removing device:", error);
             toast.error("Failed to remove device.");
         }
+    };
+
+    // Pagination calculations
+    const indexOfLastProduct = currentPage * productsPerPage;
+    const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+    const currentProducts = devices.slice(indexOfFirstProduct, indexOfLastProduct);
+    const totalPages = Math.ceil(devices.length / productsPerPage);
+
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxVisible = 5;
+
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            let start = Math.max(1, currentPage - 2);
+            let end = Math.min(totalPages, start + maxVisible - 1);
+
+            if (end === totalPages) {
+                start = Math.max(1, end - maxVisible + 1);
+            }
+
+            for (let i = start; i <= end; i++) pages.push(i);
+        }
+        return pages;
     };
 
     if (isLoading) return <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>Loading device options...</div>;
@@ -102,7 +137,7 @@ const DeviceManager = () => {
                 </div>
 
                 <ul className="dm-list">
-                    {devices.map((device, i) => (
+                    {currentProducts.map((device, i) => (
                         <li key={i} className="dm-list-item">
                             <span className="dm-device-name">{device}</span>
                             <button
@@ -118,6 +153,39 @@ const DeviceManager = () => {
                         <li className="dm-empty">No devices found. Add one above.</li>
                     )}
                 </ul>
+
+                {/* Pagination Controls */}
+                {devices.length > productsPerPage && (
+                    <div className="dm-pagination">
+                        <button
+                            onClick={() => paginate(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="dm-page-btn nav-btn"
+                        >
+                            Prev
+                        </button>
+
+                        <div className="dm-page-numbers">
+                            {getPageNumbers().map(number => (
+                                <button
+                                    key={number}
+                                    onClick={() => paginate(number)}
+                                    className={`dm-page-btn ${currentPage === number ? 'active' : ''}`}
+                                >
+                                    {number}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => paginate(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="dm-page-btn nav-btn"
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
             </div>
 
             <style>{`
@@ -208,6 +276,56 @@ const DeviceManager = () => {
                     .dm-list-item { padding: 0.75rem 1rem; }
                     .dm-device-name { font-size: 13px; }
                     .dm-delete-btn { font-size: 13px; }
+                    
+                    .dm-pagination {
+                        gap: 0.25rem;
+                    }
+                    .dm-page-btn {
+                        padding: 0.4rem 0.6rem;
+                        font-size: 12px;
+                    }
+                    .dm-page-btn.nav-btn {
+                        padding: 0.4rem 0.75rem;
+                    }
+                }
+
+                .dm-pagination {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-top: 2rem;
+                    flex-wrap: wrap;
+                }
+                .dm-page-numbers {
+                    display: flex;
+                    gap: 0.35rem;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                }
+                .dm-page-btn {
+                    background: #374151;
+                    color: white;
+                    border: 1px solid #4b5563;
+                    padding: 0.5rem 0.8rem;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: all 0.2s;
+                }
+                .dm-page-btn:hover:not(:disabled) {
+                    background: #4b5563;
+                    transform: translateY(-1px);
+                }
+                .dm-page-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+                .dm-page-btn.active {
+                    background: #dc2626;
+                    border-color: #dc2626;
+                    font-weight: bold;
+                    box-shadow: 0 0 10px rgba(220, 38, 38, 0.4);
                 }
             `}</style>
         </div>

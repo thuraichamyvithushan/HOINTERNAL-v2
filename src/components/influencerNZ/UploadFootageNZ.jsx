@@ -21,6 +21,7 @@ const UploadFootageNZ = (props) => {
     const [uploading, setUploading] = useState(false);
     const [deviceOptions, setDeviceOptions] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [showDeviceDropdown, setShowDeviceDropdown] = useState(false);
 
     const nzAnimalOptionsList = [
         "Red Deer/Stag", "Himalayan Tahr", "Alpine Chamois", "Fallow Deer",
@@ -147,20 +148,66 @@ const UploadFootageNZ = (props) => {
 
             <form onSubmit={handleUpload} className="form-grid">
                 <div className="input-column">
-                    <div className="form-group">
+                    <div className="form-group" style={{ position: 'relative' }}>
                         <label className="label">Device Name (Mandatory)</label>
-                        <select
+                        <input
+                            type="text"
                             value={deviceName}
-                            onChange={(e) => setDeviceName(e.target.value)}
+                            onChange={(e) => {
+                                setDeviceName(e.target.value);
+                                setShowDeviceDropdown(true);
+                            }}
+                            onFocus={() => setShowDeviceDropdown(true)}
+                            onBlur={() => setTimeout(() => setShowDeviceDropdown(false), 200)}
                             className="input"
+                            placeholder="Type to search devices..."
                             required
                             disabled={uploading}
-                        >
-                            <option value="">-- Select Device --</option>
-                            {deviceOptions.map((opt, i) => (
-                                <option key={i} value={opt}>{opt}</option>
-                            ))}
-                        </select>
+                            autoComplete="off"
+                        />
+                        {showDeviceDropdown && deviceOptions.filter(d => d.toLowerCase().includes(deviceName.toLowerCase())).length > 0 && (
+                            <ul style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                zIndex: 50,
+                                backgroundColor: '#1f2937',
+                                border: '1px solid #374151',
+                                borderRadius: '0.375rem',
+                                marginTop: '0.25rem',
+                                maxHeight: '200px',
+                                overflowY: 'auto',
+                                listStyle: 'none',
+                                padding: 0,
+                                margin: 0,
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+                            }}>
+                                {deviceOptions
+                                    .filter(d => d.toLowerCase().includes(deviceName.toLowerCase()))
+                                    .map((device, i) => (
+                                        <li
+                                            key={i}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                setDeviceName(device);
+                                                setShowDeviceDropdown(false);
+                                            }}
+                                            style={{
+                                                padding: '8px 12px',
+                                                cursor: 'pointer',
+                                                borderBottom: '1px solid #374151',
+                                                color: '#f3f4f6',
+                                                fontSize: '0.9rem'
+                                            }}
+                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#374151'}
+                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                        >
+                                            {device}
+                                        </li>
+                                    ))}
+                            </ul>
+                        )}
                     </div>
 
                     <div className="form-group" style={{ position: 'relative' }}>
