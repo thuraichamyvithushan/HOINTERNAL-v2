@@ -1,4 +1,4 @@
-.loader-container {
+.global-screen-loader {
 	background-color: rgba(5, 5, 5, 0.95);
 	height: 100vh;
 	width: 100vw;
@@ -16,8 +16,8 @@
 }
 
 .ip {
-	width: 16em;
-	height: 8em;
+	width: 8em;
+	height: 4em;
 }
 
 .ip__track {

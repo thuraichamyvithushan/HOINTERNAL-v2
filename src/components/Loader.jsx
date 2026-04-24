@@ -3,7 +3,7 @@ import "./Loader.css";
 
 const Loader = () => {
 	return (
-		<div className="loader-container">
+		<div className="global-screen-loader">
 			<div className="main">
 				<svg className="ip" viewBox="0 0 256 128" width="256px" height="128px" xmlns="http://www.w3.org/2000/svg">
 					<defs>

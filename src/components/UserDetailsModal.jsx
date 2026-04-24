@@ -93,43 +93,36 @@ const UserDetailsModal = () => {
       {showUserDetailsModal && (
         <div className="user-details-modal-overlay">
           <div className="user-profile-container" ref={modalRef}>
-            {loading ? (
-              <div className="loader-container">
-                <p style={{ color: 'white', marginTop: '100px' }}>Loading Data...</p>
-                <Loader className="loader" />
-              </div>
-            ) : (
-              <div className="modal-content-wrapper">
-                <img
-                  src={profilePicture || (user && user.photoURL) || "/images/dp.jpg"}
-                  alt="Profile"
-                  className="user-profile-image"
-                  style={{ display: 'block', margin: '0 auto 15px' }}
-                />
+            <div className="modal-content-wrapper">
+              <img
+                src={profilePicture || (user && user.photoURL) || "/images/dp.jpg"}
+                alt="Profile"
+                className="user-profile-image"
+                style={{ display: 'block', margin: '0 auto 15px' }}
+              />
 
-                <div className="user-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <h4 className="user-name" style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: '0 0 5px' }}>
-                    {(userData && userData.name) || (user && user.displayName) || "Influencer Account"}
-                  </h4>
-                  <p className="user-email" style={{ color: '#cccccc', fontSize: '14px', margin: '0 0 15px' }}>
-                    {(user && user.email) || "Email Not Available"}
-                  </p>
+              <div className="user-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <h4 className="user-name" style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: '0 0 5px' }}>
+                  {(userData && userData.name) || (user && user.displayName) || "Influencer Account"}
+                </h4>
+                <p className="user-email" style={{ color: '#cccccc', fontSize: '14px', margin: '0 0 15px' }}>
+                  {(user && user.email) || "Email Not Available"}
+                </p>
 
-                  <hr style={{ width: '100%', marginBottom: '20px' }} />
+                <hr style={{ width: '100%', marginBottom: '20px' }} />
 
-                  <div className="user-actions">
-                    <button className="edit-profile bUtton" onClick={handleEditProfile}>
-                      <FontAwesomeIcon icon={faUserEdit} style={{ paddingRight: "5px" }} />
-                      Update Profile
-                    </button>
-                    <button className="logout bUtton" onClick={handleLogout}>
-                      <FontAwesomeIcon icon={faSignOutAlt} style={{ paddingRight: "5px" }} />
-                      Logout
-                    </button>
-                  </div>
+                <div className="user-actions">
+                  <button className="edit-profile bUtton" onClick={handleEditProfile}>
+                    <FontAwesomeIcon icon={faUserEdit} style={{ paddingRight: "5px" }} />
+                    Update Profile
+                  </button>
+                  <button className="logout bUtton" onClick={handleLogout}>
+                    <FontAwesomeIcon icon={faSignOutAlt} style={{ paddingRight: "5px" }} />
+                    Logout
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
