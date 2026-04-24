@@ -4,7 +4,8 @@ import RegisterForm from "./RegisterForm";
 import ResetPasswordModal from "./ResetPasswordModal";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { auth } from "../firebase";
+import { auth, firestore } from "../firebase";
+import { API_URL } from "../config";
 import "./SignUpSignIn.css";
 
 const SignInSignUpForm = () => {
@@ -23,19 +24,34 @@ const SignInSignUpForm = () => {
   };
 
   const handleForgotPasswordSubmit = async () => {
-    const emailRegex = /^[^@\s]+@huntsmanoptics\.com$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email syntax");
-      setEmail("");
+    if (!email) {
+      toast.error("Please enter your email address");
       return;
     }
     try {
+      const response = await fetch(`${API_URL}/api/check-user?email=${encodeURIComponent(email)}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to verify email");
+      }
+
+      const data = await response.json();
+
+      if (!data.exists) {
+        toast.error("User details not found, please contact admin.");
+        return;
+      }
+
       await auth.sendPasswordResetEmail(email);
       toast.success("Password reset email sent successfully!");
       setShowForgotPassword(false);
     } catch (error) {
       console.error("Error sending password reset email:", error);
-      toast.error("Failed to send password reset email.");
+      if (error.code === 'auth/invalid-email') {
+        toast.error("Please enter a valid email address.");
+      } else {
+        toast.error("User details not found, please contact admin.");
+      }
     }
   };
 
@@ -44,72 +60,55 @@ const SignInSignUpForm = () => {
   };
 
   return (
-    <div style={bodyStyle}>
-      <div className="mobile-auth">
-        {!showRegisterMobile ? (
-          <div className="mobile-form">
-            <LoginForm onForgotPassword={handleForgotPassword} />
-            <p className="switch-text">
-              Don’t have an account?{" "}
-              <button
-                className="link-btn"
-                onClick={() => setShowRegisterMobile(true)}
-              >
-                Register
-              </button>
-            </p>
+    <div className="auth-page-wrapper">
+      {/* Left Section: Image and Branding */}
+      <div className="auth-left-section">
+        <div 
+          className="auth-image-bg" 
+          style={{ backgroundImage: `url('/auth_bg_optics_1777007948086.png')` }}
+        ></div>
+        <div className="auth-image-overlay">
+          <div className="auth-brand-content">
+            <h1>HUNTSMAN OPTICS</h1>
+            <p>Precision • Clarity • Performance</p>
           </div>
-        ) : (
-          <div className="mobile-form">
-            <RegisterForm onSuccessfulRegistration={() => setShowRegisterMobile(false)} />
-            <p className="switch-text">
-              Already have an account?{" "}
-              <button
-                className="link-btn"
-                onClick={() => setShowRegisterMobile(false)}
-              >
-                Login
-              </button>
-            </p>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/*Desktop Overlay*/}
-      <div
-        className={`containerA ${isSignUp ? "right-panel-active" : ""}`}
-        id="containerA"
-      >
-        {isSignUp ? (
-          <RegisterForm onSuccessfulRegistration={() => setIsSignUp(false)} />
-        ) : (
-          <LoginForm onForgotPassword={handleForgotPassword} />
-        )}
-        <div className="overlay-containerA">
-          <div className="overlay">
-            <div className="overlay-panel overlay-left">
-              <h1 className="heading1">Welcome Back!</h1>
-              <p>
-                To keep connected with us please login with your personal info
-              </p>
-              <button
-                className="ghost cmn-btn"
-                onClick={() => setIsSignUp(false)}
-              >
-                Log In
-              </button>
+      {/* Right Section: Form */}
+      <div className="auth-right-section">
+        <div className="auth-form-box">
+          {!isSignUp ? (
+            <div className="auth-form-step">
+              <div className="auth-form-header">
+                <h2>Sign In</h2>
+                <p className="form-subtitle">Welcome back to the portal</p>
+              </div>
+              <LoginForm onForgotPassword={handleForgotPassword} />
+              <div className="auth-footer">
+                <p>Don't have an account? 
+                  <button className="auth-toggle-btn" onClick={() => setIsSignUp(true)}>
+                    Register
+                  </button>
+                </p>
+              </div>
             </div>
-            <div className="overlay-panel overlay-right">
-              <h1 className="heading1">Hi there</h1>
-              <p>Enter your personal details and start journey with us</p>
-              <button
-                className="ghost cmn-btn"
-                onClick={() => setIsSignUp(true)}
-              >
-                Sign Up
-              </button>
+          ) : (
+            <div className="auth-form-step">
+              <div className="auth-form-header">
+                <h2>Register</h2>
+                <p className="form-subtitle">Join the Huntsman network</p>
+              </div>
+              <RegisterForm onSuccessfulRegistration={() => setIsSignUp(false)} />
+              <div className="auth-footer">
+                <p>Already have an account? 
+                  <button className="auth-toggle-btn" onClick={() => setIsSignUp(false)}>
+                    Sign In
+                  </button>
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -125,14 +124,6 @@ const SignInSignUpForm = () => {
   );
 };
 
-const bodyStyle = {
-  background: "#f6f5f7",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  flexDirection: "column",
-  fontFamily: `'Montserrat', sans-serif`,
-  height: "100vh",
-};
+const bodyStyle = {}; // Not used anymore as handled in CSS
 
 export default SignInSignUpForm;

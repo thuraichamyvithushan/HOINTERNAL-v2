@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { auth, firestore } from '../firebase';
 import { getRoleHomePath } from "../utils/authHelpers";
 import { toast } from "react-toastify";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEnvelope, faLock } from '@fortawesome/free-solid-svg-icons';
 import "react-toastify/dist/ReactToastify.css";
 import "./SignUpSignIn.css";
 import Loader from "./Loader";
@@ -61,8 +63,8 @@ const LoginForm = ({ onForgotPassword }) => {
 
     } catch (error) {
       console.error('Error logging in:', error);
-      if (error.code === 'auth/invalid-credential') {
-        toast.error('Invalid credentials');
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+        toast.error('User details not found');
       } else {
         toast.error("Error during login");
       }
@@ -74,31 +76,39 @@ const LoginForm = ({ onForgotPassword }) => {
   };
 
   return (
-    <div className="form-containerA sign-in-containerA">
+    <div className="login-form-container">
       {isLoading &&
         <div className="loader2-container">
           <Loader />
         </div>
       }
       <form onSubmit={handleLogin} className="form1">
-        <h2 style={{ fontWeight: "bold", marginBottom: "15px" }}>Sign in</h2>
-        <input
-          type="email"
-          placeholder="Email"
-          className="input-common"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          className="input-common"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <p className="anchor" onClick={onForgotPassword}>Forgot your password?</p>
+        <div className="input-group">
+          <FontAwesomeIcon icon={faEnvelope} className="input-icon" />
+          <input
+            type="email"
+            placeholder="Email Address"
+            className="input-common"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div className="input-group">
+          <FontAwesomeIcon icon={faLock} className="input-icon" />
+          <input
+            type="password"
+            placeholder="Password"
+            className="input-common"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+
+        <p className="anchor" onClick={onForgotPassword}>Forgot password?</p>
+        
         <button type="submit" className="cmn-btn" disabled={isLoading}>
-          Log In
+          {isLoading ? "Signing In..." : "Sign In"}
         </button>
       </form>
     </div>

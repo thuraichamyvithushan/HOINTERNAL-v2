@@ -21,14 +21,14 @@ const Hero = () => {
 
   const getGreetingFontSize = () => {
     if (windowWidth < 480) return "16px";
-    if (windowWidth < 768) return "20px";
-    if (windowWidth < 1024) return "24px";
-    return "28px";
+    if (windowWidth < 768) return "18px";
+    if (windowWidth < 1024) return "20px";
+    return "24px";
   };
 
   const getContainerHeight = () => {
-    if (windowWidth < 480) return "70vh";
-    if (windowWidth < 768) return "75vh";
+    if (windowWidth < 480) return "60vh";
+    if (windowWidth < 768) return "70vh";
     return "80vh";
   };
 
@@ -37,11 +37,12 @@ const Hero = () => {
     width: "100%",
     height: getContainerHeight(),
     minHeight: "400px",
-    maxHeight: "700px",
+    maxHeight: "950px",
     overflow: "hidden",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#050505",
   };
 
   const backgroundStyle = {
@@ -57,7 +58,7 @@ const Hero = () => {
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    filter: "brightness(0.3) contrast(1.2)",
+    filter: "brightness(0.7) contrast(1.1)",
   };
 
   const overlayStyle = {
@@ -67,14 +68,8 @@ const Hero = () => {
     width: "100%",
     height: "100%",
     background: `
-      radial-gradient(circle at 20% 30%, rgba(255, 0, 0, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 80% 70%, rgba(139, 0, 0, 0.4) 0%, transparent 50%),
-      linear-gradient(135deg, 
-        rgba(0, 0, 0, 0.9) 0%, 
-        rgba(139, 0, 0, 0.7) 30%, 
-        rgba(0, 0, 0, 0.8) 70%, 
-        rgba(0, 0, 0, 0.95) 100%
-      )
+      linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.9) 100%),
+      radial-gradient(circle at center, rgba(185,0,0,0.2) 0%, transparent 60%)
     `,
     zIndex: 2,
   };
@@ -89,15 +84,14 @@ const Hero = () => {
   };
 
   const greetingStyle = {
-    fontFamily: "'Inter', 'Work Sans', sans-serif",
+    fontFamily: "'Outfit', 'Montserrat', sans-serif",
     fontSize: getGreetingFontSize(),
-    fontWeight: 300,
-    color: "#ff0000",
-    margin: "0 0 15px 0",
-    letterSpacing: "2px",
+    fontWeight: 600,
+    color: "#b90000",
+    margin: "0 0 10px 0",
+    letterSpacing: "6px",
     textTransform: "uppercase",
-    opacity: 0.95,
-    textShadow: "0 0 20px rgba(255, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.8)",
+    textShadow: "0 4px 10px rgba(0,0,0,0.8)",
     animation: "fadeInDown 1s ease-out 0.3s both",
   };
 
@@ -107,56 +101,43 @@ const Hero = () => {
     lineHeight: 1.1,
   };
 
-  // Red and black gradient background for text
-  const redBlackGradient = `
-    linear-gradient(
-      45deg,
-      #fbfbfbff 0%,
-      #000000ff 25%,
-      #000000ff 45%,
-      #ffffffff 55%,
-      #990000 75%,
-      #ffffffff 100%
-    )
-  `;
-
   const fancyStyle = {
-    fontFamily: "'Inter', 'Work Sans', sans-serif",
+    fontFamily: "'Outfit', 'Montserrat', sans-serif",
     fontSize: getMainFontSize(),
-    fontWeight: 900,
-    background: redBlackGradient,
-    backgroundSize: "300% 300%",
+    fontWeight: 800,
+    background: "linear-gradient(to bottom right, #ffffff 0%, #999999 100%)",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
     textTransform: "uppercase",
-    letterSpacing: windowWidth < 768 ? "2px" : "4px",
-    animation: "gradientFlow 3s ease-in-out infinite, scaleUp 0.8s ease-out 0.6s both",
-    filter: "drop-shadow(0 4px 12px rgba(255, 0, 0, 0.4))",
-    textShadow: "0 0 30px rgba(255, 0, 0, 0.3)",
+    letterSpacing: windowWidth < 768 ? "3px" : "8px",
+    animation: "scaleUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both",
+    filter: "drop-shadow(0 15px 25px rgba(0, 0, 0, 0.8))",
   };
 
   const accentLineStyle = {
-    width: windowWidth < 768 ? "50px" : "80px",
-    height: "3px",
-    background: "linear-gradient(90deg, #ff0000, #000000)",
-    margin: "20px auto 0",
+    width: windowWidth < 768 ? "60px" : "100px",
+    height: "4px",
+    background: "#b90000",
+    margin: "30px auto 0",
     borderRadius: "2px",
-    animation: "expandWidth 1s ease-out 0.9s both",
-    boxShadow: "0 0 15px rgba(255, 0, 0, 0.6)",
+    animation: "expandWidth 1s cubic-bezier(0.16, 1, 0.3, 1) 0.8s both",
+    boxShadow: "0 0 15px rgba(185, 0, 0, 0.8)",
   };
 
   return (
     <>
       <style>
         {`
+          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
           @keyframes fadeInDown {
             from {
               opacity: 0;
-              transform: translateY(-30px);
+              transform: translateY(-20px);
             }
             to {
-              opacity: 0.95;
+              opacity: 1;
               transform: translateY(0);
             }
           }
@@ -164,20 +145,11 @@ const Hero = () => {
           @keyframes scaleUp {
             from {
               opacity: 0;
-              transform: scale(0.8);
+              transform: scale(0.95) translateY(10px);
             }
             to {
               opacity: 1;
-              transform: scale(1);
-            }
-          }
-
-          @keyframes gradientFlow {
-            0%, 100% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
+              transform: scale(1) translateY(0);
             }
           }
 
@@ -187,7 +159,7 @@ const Hero = () => {
               opacity: 0;
             }
             to {
-              width: ${windowWidth < 768 ? "50px" : "80px"};
+              width: ${windowWidth < 768 ? "60px" : "100px"};
               opacity: 1;
             }
           }
@@ -203,7 +175,7 @@ const Hero = () => {
           /* High contrast mode support */
           @media (prefers-contrast: high) {
             .hero-fancy-text {
-              background: #ff0000 !important;
+              background: #ffffff !important;
               -webkit-background-clip: text !important;
               background-clip: text !important;
             }
@@ -215,8 +187,8 @@ const Hero = () => {
         {/* Background Layer */}
         <div style={backgroundStyle}>
           <img
-            src="/images/paper.avif"
-            alt="hero background"
+            src="/admin_hero_optics.png"
+            alt="Huntsman Optics Admin Hero"
             style={imageStyle}
             loading="eager"
           />
@@ -225,10 +197,10 @@ const Hero = () => {
 
         {/* Content Layer */}
         <div style={contentStyle}>
-          <p style={greetingStyle}>Hello Admin</p>
+          <p style={greetingStyle}>System Administration</p>
           <div style={titleStyle}>
             <span style={fancyStyle} className="hero-fancy-text">
-              Welcome To The Portal
+              Command Center
             </span>
           </div>
           <div style={accentLineStyle}></div>

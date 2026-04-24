@@ -13,24 +13,25 @@ const Hero = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Responsive calculations
+  const isNZ = user?.country?.toLowerCase() === "new zealand" || user?.country?.toLowerCase() === "nz";
+  const heroImage = "/admin_hero_optics.png";
+
   const getMainFontSize = () => {
     if (windowWidth < 480) return "32px";
-    if (windowWidth < 768) return "45px";
-    if (windowWidth < 1024) return "55px";
-    return "65px";
+    if (windowWidth < 768) return "48px";
+    if (windowWidth < 1024) return "60px";
+    return "72px";
   };
 
   const getGreetingFontSize = () => {
-    if (windowWidth < 480) return "16px";
-    if (windowWidth < 768) return "20px";
-    if (windowWidth < 1024) return "24px";
-    return "28px";
+    if (windowWidth < 480) return "14px";
+    if (windowWidth < 768) return "18px";
+    return "22px";
   };
 
   const getContainerHeight = () => {
-    if (windowWidth < 480) return "70vh";
-    if (windowWidth < 768) return "75vh";
+    if (windowWidth < 480) return "60vh";
+    if (windowWidth < 768) return "70vh";
     return "80vh";
   };
 
@@ -38,12 +39,14 @@ const Hero = () => {
     position: "relative",
     width: "100%",
     height: getContainerHeight(),
-    minHeight: "400px",
-    maxHeight: "700px",
+    minHeight: "450px",
+    maxHeight: "950px",
     overflow: "hidden",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#050505",
+    fontFamily: "'Outfit', sans-serif",
   };
 
   const backgroundStyle = {
@@ -59,7 +62,9 @@ const Hero = () => {
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    filter: "brightness(0.3) contrast(1.2)",
+    filter: "brightness(0.45) contrast(1.1) saturate(1.1)",
+    transform: "scale(1.05)",
+    animation: "slowZoom 20s infinite alternate ease-in-out",
   };
 
   const overlayStyle = {
@@ -68,186 +73,136 @@ const Hero = () => {
     left: 0,
     width: "100%",
     height: "100%",
-    background: `
-      radial-gradient(circle at 20% 30%, rgba(255, 0, 0, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 80% 70%, rgba(139, 0, 0, 0.4) 0%, transparent 50%),
-      linear-gradient(135deg, 
-        rgba(0, 0, 0, 0.9) 0%, 
-        rgba(139, 0, 0, 0.7) 30%, 
-        rgba(0, 0, 0, 0.8) 70%, 
-        rgba(0, 0, 0, 0.95) 100%
-      )
-    `,
+    background: `linear-gradient(to bottom, 
+      rgba(0,0,0,0.4) 0%, 
+      rgba(0,0,0,0.2) 40%, 
+      rgba(0,0,0,0.8) 100%
+    ), radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.4) 100%)`,
     zIndex: 2,
+  };
+
+  const glowStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "60%",
+    height: "60%",
+    background: "radial-gradient(circle, rgba(185, 0, 0, 0.15) 0%, transparent 70%)",
+    transform: "translate(-50%, -50%)",
+    zIndex: 3,
+    pointerEvents: "none",
   };
 
   const contentStyle = {
     position: "relative",
     zIndex: 10,
     textAlign: "center",
-    padding: "0 20px",
-    maxWidth: "1000px",
+    padding: "0 30px",
+    maxWidth: "1100px",
     width: "100%",
   };
 
   const greetingStyle = {
-    fontFamily: "'Inter', 'Work Sans', sans-serif",
     fontSize: getGreetingFontSize(),
-    fontWeight: 300,
-    color: "#ff0000",
-    margin: "0 0 15px 0",
-    letterSpacing: "2px",
+    fontWeight: 600,
+    color: "#b90000",
+    margin: "0 0 10px 0",
+    letterSpacing: "4px",
     textTransform: "uppercase",
-    opacity: 0.95,
-    textShadow: "0 0 20px rgba(255, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.8)",
-    animation: "fadeInDown 1s ease-out 0.3s both",
+    opacity: 0,
+    animation: "fadeInDown 0.8s ease-out forwards",
   };
 
   const titleStyle = {
     margin: 0,
     padding: 0,
-    lineHeight: 1.1,
+    lineHeight: 1,
+    perspective: "1000px",
   };
 
-  // Red and black gradient background for text
-  const redBlackGradient = `
-    linear-gradient(
-      45deg,
-      #fbfbfbff 0%,
-      #000000ff 25%,
-      #000000ff 45%,
-      #ffffffff 55%,
-      #990000 75%,
-      #ffffffff 100%
-    )
-  `;
-
   const fancyStyle = {
-    fontFamily: "'Inter', 'Work Sans', sans-serif",
     fontSize: getMainFontSize(),
-    fontWeight: 900,
-    background: redBlackGradient,
-    backgroundSize: "300% 300%",
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    color: "transparent",
+    fontWeight: 800,
+    color: "#ffffff",
     textTransform: "uppercase",
-    letterSpacing: windowWidth < 768 ? "2px" : "4px",
-    animation: "gradientFlow 3s ease-in-out infinite, scaleUp 0.8s ease-out 0.6s both",
-    filter: "drop-shadow(0 4px 12px rgba(255, 0, 0, 0.4))",
-    textShadow: "0 0 30px rgba(255, 0, 0, 0.3)",
+    letterSpacing: windowWidth < 768 ? "4px" : "8px",
+    display: "block",
+    opacity: 0,
+    transform: "translateZ(50px)",
+    animation: "revealText 1s cubic-bezier(0.23, 1, 0.32, 1) 0.3s forwards",
+    textShadow: "0 10px 30px rgba(0,0,0,0.5)",
   };
 
   const accentLineStyle = {
-    width: windowWidth < 768 ? "50px" : "80px",
-    height: "3px",
-    background: "linear-gradient(90deg, #ff0000, #000000)",
-    margin: "20px auto 0",
+    width: "0px",
+    height: "4px",
+    background: "linear-gradient(90deg, transparent, #b90000, transparent)",
+    margin: "25px auto",
     borderRadius: "2px",
-    animation: "expandWidth 1s ease-out 0.9s both",
-    boxShadow: "0 0 15px rgba(255, 0, 0, 0.6)",
+    animation: "expandLine 1.2s cubic-bezier(0.23, 1, 0.32, 1) 0.8s forwards",
+    boxShadow: "0 0 20px rgba(185, 0, 0, 0.4)",
+  };
+
+  const regionStyle = {
+    fontSize: getGreetingFontSize(),
+    fontWeight: 400,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginTop: "10px",
+    letterSpacing: "3px",
+    textTransform: "uppercase",
+    opacity: 0,
+    animation: "fadeInUp 0.8s ease-out 1s forwards",
   };
 
   return (
     <>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet" />
       <style>
         {`
           @keyframes fadeInDown {
-            from {
-              opacity: 0;
-              transform: translateY(-30px);
-            }
-            to {
-              opacity: 0.95;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-
-          @keyframes scaleUp {
-            from {
-              opacity: 0;
-              transform: scale(0.8);
-            }
-            to {
-              opacity: 1;
-              transform: scale(1);
-            }
+          @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 0.8; transform: translateY(0); }
           }
-
-          @keyframes gradientFlow {
-            0%, 100% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
-            }
+          @keyframes revealText {
+            from { opacity: 0; transform: translateY(30px) translateZ(50px); }
+            to { opacity: 1; transform: translateY(0) translateZ(0); }
           }
-
-          @keyframes expandWidth {
-            from {
-              width: 0;
-              opacity: 0;
-            }
-            to {
-              width: ${windowWidth < 768 ? "50px" : "80px"};
-              opacity: 1;
-            }
+          @keyframes expandLine {
+            from { width: 0; }
+            to { width: ${windowWidth < 768 ? "100px" : "180px"}; }
           }
-
-          /* Disable animations for users who prefer reduced motion */
-          @media (prefers-reduced-motion: reduce) {
-            * {
-              animation: none !important;
-              transition: none !important;
-            }
-          }
-
-          /* High contrast mode support */
-          @media (prefers-contrast: high) {
-            .hero-fancy-text {
-              background: #ff0000 !important;
-              -webkit-background-clip: text !important;
-              background-clip: text !important;
-            }
+          @keyframes slowZoom {
+            from { transform: scale(1.05); }
+            to { transform: scale(1.15); }
           }
         `}
       </style>
 
       <div style={containerStyle}>
-        {/* Background Layer */}
         <div style={backgroundStyle}>
           <img
-            src="/images/paper.avif"
-            alt="hero background"
+            src={heroImage}
+            alt="Representative Dashboard Hero"
             style={imageStyle}
             loading="eager"
           />
           <div style={overlayStyle}></div>
+          <div style={glowStyle}></div>
         </div>
 
-        {/* Content Layer */}
         <div style={contentStyle}>
-          <p style={greetingStyle}>Hello Representative</p>
+          <p style={greetingStyle}>Field Operations</p>
           <div style={titleStyle}>
-            <span style={fancyStyle} className="hero-fancy-text">
-              Welcome To The Portal
-            </span>
+            <span style={fancyStyle}>Representative Portal</span>
           </div>
-          <p style={{
-            fontFamily: "'Inter', 'Work Sans', sans-serif",
-            fontSize: getGreetingFontSize(),
-            fontWeight: 400,
-            color: "#ffffff",
-            marginTop: "15px",
-            marginBottom: 0,
-            letterSpacing: "2px",
-            textTransform: "uppercase",
-            textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
-            animation: "fadeInDown 1s ease-out 0.5s both"
-          }}>
+          <div style={accentLineStyle}></div>
+          <p style={regionStyle}>
             {user?.country || 'Australia'} Region
           </p>
-          <div style={accentLineStyle}></div>
         </div>
       </div>
     </>

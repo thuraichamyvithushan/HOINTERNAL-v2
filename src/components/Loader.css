@@ -10,7 +10,8 @@
 	background-color:transparent;
 	color: var(--fg);
 	font: 0.5em/1.5 sans-serif;
-	height: 100vh;
+	height: 100%;
+	width: 100%;
 	display: grid;
 	place-items: center;
 	transition: background-color var(--trans-dur);

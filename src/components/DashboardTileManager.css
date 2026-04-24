@@ -26,23 +26,44 @@
 }
 
 .dtm-save-btn {
-    background: #1a6fc4;
+    background: #b90000;
     color: #fff;
     border: none;
-    border-radius: 6px;
-    padding: 10px 20px;
-    font-weight: 600;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     cursor: pointer;
     font-size: 14px;
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: 0 4px 6px rgba(185, 0, 0, 0.2);
+}
+
+.dtm-save-btn:hover:not(:disabled) {
+    background: #800000;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(185, 0, 0, 0.3);
+}
+
+.dtm-save-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
 }
 
 .dtm-seed-btn {
-    background: #555;
+    background: #0a0a0a;
     color: #fff;
     border: none;
-    border-radius: 6px;
-    padding: 10px 20px;
-    font-weight: 600;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     cursor: pointer;
     font-size: 14px;
 }
@@ -55,16 +76,31 @@
 }
 
 .dtm-page-selector-label {
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: 700;
+    font-size: 15px;
+    font-family: 'Outfit', sans-serif;
+    color: #000;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .dtm-page-select {
-    padding: 8px 14px;
-    border-radius: 6px;
-    border: 1.5px solid #ccc;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 2px solid #000;
     font-size: 14px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: #000;
     min-width: 240px;
+    background-color: #fff;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+    outline: none;
+}
+
+.dtm-page-select:focus {
+    border-color: #b90000;
 }
 
 .dtm-section-box {

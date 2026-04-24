@@ -79,7 +79,7 @@ const TileCard = ({
 
             <div className="dtm-form-row">
                 <label className="dtm-label">Image</label>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, flexWrap: "wrap" }}>
                     <img
                         src={tile.imageUrl || "/images/logo_02.png"}
                         alt=""
@@ -88,7 +88,7 @@ const TileCard = ({
                     />
                     <input
                         className="dtm-input"
-                        style={{ flex: 1 }}
+                        style={{ flex: 1, minWidth: "150px" }}
                         value={tile.imageUrl}
                         onChange={(e) => update("imageUrl", e.target.value)}
                         placeholder="./images/example.png or URL"
@@ -384,7 +384,7 @@ const DashboardTileManager = () => {
                         <button className="dtm-back-btn" onClick={popView}>← Back</button>
                     )}
                     <button className="dtm-save-btn" onClick={saveConfig} disabled={saving}>
-                        {saving ? "Saving..." : "💾 Save Changes"}
+                        {saving ? "Saving..." : "Save Changes"}
                     </button>
                 </div>
             </div>

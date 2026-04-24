@@ -24,7 +24,7 @@ const AdminCard = () => {
         <div className="cards-container">
           {auCards.map((card, index) => (
             <Link to={card.link} key={`au-${index}`} className="card-link">
-              <div className="dashboard-card" style={{ backgroundColor: card.color }}>
+              <div className="dashboard-card">
                 <h3>{card.title}</h3>
               </div>
             </Link>
@@ -37,7 +37,7 @@ const AdminCard = () => {
         <div className="cards-container">
           {nzCards.map((card, index) => (
             <Link to={card.link} key={`nz-${index}`} className="card-link">
-              <div className="dashboard-card" style={{ backgroundColor: card.color }}>
+              <div className="dashboard-card">
                 <h3>{card.title}</h3>
               </div>
             </Link>

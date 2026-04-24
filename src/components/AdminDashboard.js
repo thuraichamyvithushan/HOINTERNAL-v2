@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { firestore } from "../firebase";
 import Loader from "./Loader";
 import { toast } from "react-toastify";
-import { doc, updateDoc, deleteDoc, getDocs, collection } from "firebase/firestore";
+import { doc, updateDoc, getDocs, collection } from "firebase/firestore";
+import { API_URL } from "../config";
 import DeviceManager from "./DeviceManager";
 import DashboardTileManager from "./DashboardTileManager";
 import "./AdminDashboard.css";
@@ -59,10 +60,18 @@ const AdminDashboard = () => {
   };
 
   const deleteUser = async (userId) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    if (!window.confirm("Are you sure you want to delete this user? This will remove them from both Firestore and Firebase Authentication.")) return;
     try {
-      await deleteDoc(doc(firestore, "users", userId));
-      toast.success("User deleted!");
+      const response = await fetch(`${API_URL}/api/users/${userId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete user");
+      }
+
+      toast.success("User deleted from Auth and Firestore!");
       setUsers(prev => prev.filter(u => u.id !== userId));
     } catch (error) {
       console.error("Error deleting user:", error);

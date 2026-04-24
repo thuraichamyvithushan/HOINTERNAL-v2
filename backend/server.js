@@ -241,6 +241,28 @@ app.get('/api/footage/:userId', async (req, res) => {
     }
 });
 
+// Check if user exists by email (For Forgot Password)
+app.get('/api/check-user', async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) return res.status(400).json({ error: 'Email is required' });
+
+        try {
+            await admin.auth().getUserByEmail(email);
+            res.status(200).json({ exists: true });
+        } catch (error) {
+            if (error.code === 'auth/user-not-found') {
+                res.status(200).json({ exists: false });
+            } else {
+                throw error;
+            }
+        }
+    } catch (error) {
+        console.error('Error checking user:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // GET All Users for Admin Console
 app.get('/api/users', async (req, res) => {
     try {
@@ -249,6 +271,37 @@ app.get('/api/users', async (req, res) => {
         res.status(200).json(users);
     } catch (error) {
         console.error('Error fetching users:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE User from Auth and Firestore
+app.delete('/api/users/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+        console.log(`[DELETE USER REQUEST] Attempting to delete user UID: ${uid}`);
+
+        // 1. Delete from Firebase Auth
+        try {
+            await admin.auth().deleteUser(uid);
+            console.log(`[DELETE USER INFO] Deleted user ${uid} from Auth.`);
+        } catch (authErr) {
+            // If user doesn't exist in Auth, we might still want to delete from Firestore if it exists there
+            if (authErr.code === 'auth/user-not-found') {
+                console.warn(`[DELETE USER WARNING] User ${uid} not found in Auth, continuing to Firestore deletion.`);
+            } else {
+                console.error(`[DELETE USER ERROR] Auth deletion failed for ${uid}:`, authErr.message);
+                throw authErr;
+            }
+        }
+
+        // 2. Delete from Firestore
+        await db.collection('users').doc(uid).delete();
+        console.log(`[DELETE USER INFO] Deleted user ${uid} from Firestore.`);
+
+        res.status(200).json({ success: true, message: 'User deleted from Auth and Firestore successfully' });
+    } catch (error) {
+        console.error('Error deleting user:', error);
         res.status(500).json({ error: error.message });
     }
 });
