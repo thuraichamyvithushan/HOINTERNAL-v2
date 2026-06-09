@@ -1,0 +1,64 @@
+.global-screen-loader {
+	background-color: rgba(5, 5, 5, 0.95);
+	height: 100vh;
+	width: 100vw;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 99999;
+}
+
+.main {
+	padding: 1.5em 0;
+}
+
+.ip {
+	width: 8em;
+	height: 4em;
+}
+
+.ip__track {
+	stroke: #222222;
+	transition: stroke 0.3s;
+}
+
+.ip__worm1,
+.ip__worm2 {
+	animation: worm1 2s linear infinite;
+}
+
+.ip__worm2 {
+	animation-name: worm2;
+}
+
+@keyframes worm1 {
+	from {
+		stroke-dashoffset: 0;
+	}
+	50% {
+		animation-timing-function: steps(1);
+		stroke-dashoffset: -358;
+	}
+	50.01% {
+		animation-timing-function: linear;
+		stroke-dashoffset: 358;
+	}
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+@keyframes worm2 {
+	from {
+		stroke-dashoffset: 358;
+	}
+	50% {
+		stroke-dashoffset: 0;
+	}
+	to {
+		stroke-dashoffset: -358;
+	}
+}

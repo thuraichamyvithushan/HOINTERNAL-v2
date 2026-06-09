@@ -1,0 +1,425 @@
+.user-details-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  animation: modalOverlayFadeIn 0.3s ease-out;
+}
+
+@keyframes modalOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.user-profile-container {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 50%, #1a1a1a 100%);
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: rgba(0, 0, 0, 0.4) 0px 2px 4px,
+    rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+    rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+  width: 400px;
+  position: relative;
+  min-height: 280px;
+  height: auto;
+  border: 1px solid rgba(139, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  overflow: visible !important;
+  display: block;
+}
+
+
+
+
+/* Tablet (up to 768px) */
+@media (max-width: 768px) {
+  .user-profile-container {
+    width: 400px;
+    max-width: 400px;
+    height: auto;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-profile-container {
+    width: 90%;
+    min-width: 280px;
+    height: auto;
+    padding: 20px 15px;
+  }
+
+  .user-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .user-name,
+  .user-email {
+    color: #ffffff !important;
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+}
+
+
+
+.user-profile-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #8b0000, #dc143c, #b22222, #a52a2a);
+  background-size: 300% 100%;
+  animation: gradientMove 4s ease-in-out infinite;
+}
+
+.user-profile-container::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, #8b0000, #dc143c, #b22222, #a52a2a);
+  background-size: 300% 300%;
+  border-radius: 26px;
+  z-index: -1;
+  opacity: 0;
+  animation: borderPulse 3s ease-in-out infinite;
+  transition: opacity 0.3s ease;
+}
+
+.user-profile-container:hover::after {
+  opacity: 0.2;
+}
+
+.user-profile-image {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+  border: 4px solid transparent;
+  background: linear-gradient(#2c2c2c, #2c2c2c) padding-box,
+    linear-gradient(135deg, #8b0000, #dc143c, #b22222) border-box;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 2px rgba(139, 0, 0, 0.2);
+  object-fit: cover;
+}
+
+.user-profile-image:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 15px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 4px rgba(220, 20, 60, 0.4);
+  background: linear-gradient(#2c2c2c, #2c2c2c) padding-box,
+    linear-gradient(135deg, #dc143c, #b22222, #a52a2a) border-box;
+}
+
+.user-info {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.user-name {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.025em;
+  transition: all 0.3s ease;
+}
+
+.user-name:hover {
+  color: #dc143c;
+  transform: translateY(-1px);
+}
+
+.user-email {
+  margin: 5px 0 15px 0;
+  color: #cccccc;
+  font-weight: 500;
+  font-size: 14px;
+  opacity: 0.9;
+  transition: all 0.3s ease;
+}
+
+.user-email:hover {
+  color: #dc143c;
+  opacity: 1;
+}
+
+.user-actions {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.bUtton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.025em;
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+}
+
+.bUtton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s;
+}
+
+.bUtton:hover::before {
+  left: 100%;
+}
+
+.bUtton:focus {
+  outline: 2px solid #dc143c;
+  outline-offset: 2px;
+}
+
+.edit-profile {
+  background: linear-gradient(135deg, #333333, #1a1a1a);
+  color: #e0e0e0;
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(139, 0, 0, 0.3);
+}
+
+.edit-profile:hover {
+  background: linear-gradient(135deg, #1a1a1a, #000000);
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(220, 20, 60, 0.3);
+  color: #ffffff;
+  border-color: rgba(220, 20, 60, 0.5);
+}
+
+.logout {
+  background: linear-gradient(135deg, #8b0000, #dc143c);
+  color: white;
+  box-shadow:
+    0 4px 15px rgba(139, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(220, 20, 60, 0.3);
+}
+
+.logout:hover {
+  background: linear-gradient(135deg, #dc143c, #b22222);
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 25px rgba(220, 20, 60, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+hr {
+  width: 100%;
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #333333, transparent);
+  margin: 20px 0;
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+hr::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #dc143c, transparent);
+  animation: hrShimmer 2s ease-in-out infinite;
+}
+
+.loader-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+/* Modern Animations */
+@keyframes modalSlideIn {
+  from {
+    opacity: 1;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.user-profile-container {
+  animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes gradientMove {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes borderPulse {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.1;
+  }
+
+  50% {
+    background-position: 100% 50%;
+    opacity: 0.3;
+  }
+}
+
+@keyframes hrShimmer {
+  0% {
+    left: -100%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes loaderPulse {
+
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .user-profile-container {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 50%, #0d0d0d 100%);
+    border-color: rgba(139, 0, 0, 0.4);
+  }
+
+  .user-name {
+    color: #ffffff;
+  }
+
+  .user-name:hover {
+    color: #ff6b6b;
+  }
+
+  .user-email {
+    color: #bbbbbb;
+  }
+
+  .user-email:hover {
+    color: #ff6b6b;
+  }
+
+  .user-profile-image {
+    background: linear-gradient(#1a1a1a, #1a1a1a) padding-box,
+      linear-gradient(135deg, #8b0000, #dc143c, #b22222) border-box;
+  }
+
+  hr {
+    background: linear-gradient(90deg, transparent, #262626, transparent);
+  }
+
+  .loader {
+    background: linear-gradient(135deg, rgba(13, 13, 13, 0.95), rgba(26, 26, 26, 0.9));
+    border-color: rgba(139, 0, 0, 0.4);
+  }
+}
+
+/* Enhanced Accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+  .user-details-modal,
+  .user-profile-container,
+  .user-profile-image,
+  .user-name,
+  .user-email,
+  .bUtton,
+  .loader {
+    animation: none;
+    transition: none;
+  }
+
+  .bUtton::before,
+  hr::before {
+    display: none;
+  }
+
+  .user-profile-container::before,
+  .user-profile-container::after {
+    animation: none;
+  }
+}
+
+/* High Contrast Support */
+@media (prefers-contrast: high) {
+  .user-profile-container {
+    border: 2px solid #000;
+  }
+
+  .bUtton {
+    border: 2px solid #000;
+  }
+}

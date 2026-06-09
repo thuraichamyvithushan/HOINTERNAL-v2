@@ -1,0 +1,855 @@
+/* Huntsman Style Dark Navbar */
+.navbar2-drive {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 3rem;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333333;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  height: 70px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  overflow: visible;
+  text-align: left;
+}
+
+.navbar2-drive-left {
+  display: flex;
+  align-items: center;
+}
+
+.navbar2-drive-logo {
+  height: 45px;
+  width: auto;
+  transition: opacity 0.3s ease;
+}
+
+.navbar2-drive-logo:hover {
+  opacity: 0.8;
+}
+
+.navbar2-drive-right {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+  overflow: visible;
+}
+
+.navbar2-menu1,
+.navbar2-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.navbar2-dropbtn {
+  background: transparent;
+  border: none;
+  padding: 1rem 1.5rem;
+  font-size: 15px;
+  font-weight: 400;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.3px;
+  text-transform: none;
+}
+
+.navbar2-dropbtn:hover {
+  color: #ff4444;
+  background-color: rgba(255, 68, 68, 0.05);
+}
+
+.navbar2-dropbtn:focus {
+  outline: none;
+  color: #ff4444;
+}
+
+.navbar2-dropdown:first-child .navbar2-dropbtn {
+  color: #ff4444;
+  font-weight: 500;
+}
+
+.navbar2-dropbtn::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  transition: transform 0.3s ease;
+  margin-left: 4px;
+}
+
+.navbar2-dropdown:hover .navbar2-dropbtn::after {
+  transform: rotate(180deg);
+}
+
+.navbar2-menu1 .navbar2-dropbtn::after {
+  display: none;
+}
+
+.navbar2-dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #1a1a1a;
+  min-width: 250px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  /* border: 1px solid #444444; */
+  z-index: 1001;
+  padding: 1rem 0;
+  margin-top: -1px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-15px);
+  transition: all 0.3s ease;
+}
+
+.navbar2-dropdown:hover .navbar2-dropdown-content {
+  display: block;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.navbar2-grid-4x4 {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  min-width: 750px;
+  padding: 1.5rem;
+  background-color: #1a1a1a;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid #444444;
+  z-index: 1001;
+  margin-top: -1px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-15px);
+  transition: all 0.3s ease;
+  overflow-x: auto;
+  max-width: 95vw;
+}
+
+.navbar2-dropdown:hover .navbar2-grid-4x4 {
+  display: grid;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.navbar2-grid-4x4 a {
+  padding: 1rem 1.25rem !important;
+  text-align: left;
+  margin: 0;
+  border-right: 1px solid #444444;
+  border-bottom: 1px solid #444444;
+}
+
+.navbar2-grid-4x4 a:nth-child(4n) {
+  border-right: none;
+}
+
+.navbar2-grid-4x4 a:nth-last-child(-n+4) {
+  border-bottom: none;
+}
+
+.navbar2-dropdown-content a,
+.navbar2-dropdown-content .navbar2-dropdown-item {
+  color: #e0e0e0;
+  padding: 0.875rem 1.5rem;
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  transition: all 0.25s ease;
+  letter-spacing: 0.2px;
+  border-left: 3px solid transparent;
+}
+
+.navbar2-dropdown-content a:hover,
+.navbar2-dropdown-content .navbar2-dropdown-item:hover {
+  background-color: rgba(255, 68, 68, 0.1);
+  color: #ff4444;
+  border-left-color: #ff4444;
+}
+
+.navbar2-nested-wrapper {
+  position: relative;
+}
+
+.navbar2-nested-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #e0e0e0;
+  padding: 0.875rem 1.5rem;
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.25s ease;
+  position: relative;
+  letter-spacing: 0.2px;
+  border-left: 3px solid transparent;
+}
+
+.navbar2-nested-btn::after {
+  content: '›';
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  transition: all 0.3s ease;
+  color: #888888;
+}
+
+.navbar2-nested-btn:hover {
+  background-color: rgba(255, 68, 68, 0.1);
+  color: #ff4444;
+  border-left-color: #ff4444;
+}
+
+.navbar2-nested-btn:hover::after {
+  color: #ff4444;
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.navbar2-nested-dropdown {
+  display: none;
+  position: absolute;
+  top: -1rem;
+  left: 100%;
+  background-color: #333333;
+  min-width: 220px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid #555555;
+  z-index: 1002;
+  padding: 1rem 0;
+  margin-left: 0;
+}
+
+.navbar2-nested-wrapper:hover .navbar2-nested-dropdown {
+  display: block;
+  animation: slideRight 0.3s ease;
+}
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.navbar2-nested-link {
+  color: #e0e0e0;
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  transition: all 0.25s ease;
+  letter-spacing: 0.2px;
+  border-left: 3px solid transparent;
+}
+
+.navbar2-nested-link:hover {
+  background-color: rgba(255, 68, 68, 0.1);
+  color: #ff4444;
+  border-left-color: #ff4444;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .navbar2-drive {
+    padding: 0 2rem;
+  }
+
+  .navbar2-grid-4x4 {
+    min-width: 600px;
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar2-drive {
+    padding: 0 1rem;
+    height: 60px;
+  }
+
+  .navbar2-drive-logo {
+    height: 35px;
+  }
+
+  .navbar2-dropbtn {
+    padding: 0.75rem 1rem;
+    font-size: 14px;
+    color: white;
+  }
+
+  .navbar2-grid-4x4 {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 400px;
+    padding: 1rem;
+  }
+
+  .navbar2-dropdown-content {
+    min-width: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar2-drive {
+    padding: 0 0.75rem;
+  }
+
+  .navbar2-drive-right {
+    gap: 0;
+  }
+
+  .navbar2-dropbtn {
+    padding: 0.5rem 0.75rem;
+    font-size: 13px;
+    color: white;
+  }
+
+  .navbar2-grid-4x4 {
+    grid-template-columns: 1fr;
+    min-width: 280px;
+  }
+
+  .navbar2-nested-dropdown {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 250px;
+  }
+}
+
+/* Scrollbar Styling */
+.navbar2-dropdown-content::-webkit-scrollbar,
+.navbar2-nested-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.navbar2-dropdown-content::-webkit-scrollbar-track,
+.navbar2-nested-dropdown::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.navbar2-dropdown-content::-webkit-scrollbar-thumb,
+.navbar2-nested-dropdown::-webkit-scrollbar-thumb {
+  background: #555555;
+  border-radius: 3px;
+}
+
+.navbar2-dropdown-content::-webkit-scrollbar-thumb:hover,
+.navbar2-nested-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #ff4444;
+}
+
+/* OPEN-LEFT Support */
+.navbar2-dropdown.navbar2-open-left .navbar2-dropdown-content,
+.navbar2-dropdown.navbar2-open-left .navbar2-grid-4x4 {
+  left: auto;
+  right: 0;
+}
+
+.navbar2-dropdown.navbar2-open-left .navbar2-grid-4x4 {
+  max-width: 95vw;
+  overflow-x: auto;
+}
+
+/* Base nested submenu opens right */
+.navbar2-nested-dropdown {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  /* open to the right of nested-wrapper */
+  background: rgb(0, 0, 0);
+  border: 1px solid #ccc;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  min-width: 160px;
+  z-index: 1000;
+  display: none;
+  padding: 0.5rem 0;
+}
+
+/* Show nested submenu on hover of its wrapper */
+.navbar2-nested-wrapper:hover .navbar2-nested-dropdown {
+  display: block;
+}
+
+/* When opening left, position nested submenu to left side */
+.navbar2-nested-dropdown.navbar2-open-left {
+  left: auto;
+  right: 100%;
+  /* open to the left of nested-wrapper */
+  margin-right: 0.25rem;
+}
+
+/* 4 rows × 3 columns grid layout for Menu 3 Profile submenu - No Scrollbar */
+.navbar2-nested-dropdown-grid.navbar2-grid-4x3 {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(80px, auto);
+  gap: 2px;
+  padding: 5px;
+  background-color: #1a1a1a;
+  color: white;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: min(480px, calc(100vw - var(--parent-right, 80px)));
+  max-width: 980px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  overflow: hidden;
+  max-height: 90vh;
+}
+
+/* Menu 4 simple nested dropdown - No Scrollbar */
+.navbar2-nested-dropdown-simple {
+  display: block;
+  padding: 16px;
+  background-color: #1a1a1a;
+  color: white;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: min(250px, calc(100vw - var(--menu4-parent-right, 60px)));
+  max-width: 250px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Show Menu 3 grid on hover */
+.navbar2-nested-wrapper:hover .navbar2-nested-dropdown-grid.navbar2-grid-4x3 {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+/* Show Menu 4 simple dropdown on hover */
+.navbar2-nested-wrapper:hover .navbar2-nested-dropdown-simple {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+/* Open Menu 3 grid to the left if needed */
+.navbar2-nested-dropdown-grid.navbar2-grid-4x3.navbar2-open-left {
+  left: auto;
+  right: 100%;
+  transform: translateX(-10px);
+  width: min(880px, calc(var(--parent-left, 480px) - 40px));
+}
+
+.navbar2-nested-wrapper:hover .navbar2-nested-dropdown-grid.navbar2-grid-4x3.navbar2-open-left {
+  transform: translateX(0);
+}
+
+/* Open Menu 4 simple dropdown to the left if needed */
+.navbar2-nested-dropdown-simple.navbar2-open-left {
+  left: auto;
+  right: 100%;
+  transform: translateX(-10px);
+  width: min(250px, calc(var(--menu4-parent-left, 250px) - 20px));
+}
+
+.navbar2-nested-wrapper:hover .navbar2-nested-dropdown-simple.navbar2-open-left {
+  transform: translateX(0);
+}
+
+/* Responsive adjustment for smaller screens - Menu 3 */
+@media (max-width: 768px) {
+  .navbar2-nested-dropdown-grid.navbar2-grid-4x3 {
+    width: min(320px, calc(100vw - 40px)) !important;
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .navbar2-nested-dropdown-grid.navbar2-grid-4x3 .navbar2-nested-link {
+    padding: 10px 12px;
+    font-size: 12px;
+    min-height: 45px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar2-nested-dropdown-grid.navbar2-grid-4x3 {
+    width: calc(100vw - 20px) !important;
+    padding: 12px;
+    gap: 3px;
+    grid-template-columns: repeat(2, 1fr);
+    /* 2 columns on very small screens */
+  }
+
+  .navbar2-nested-dropdown-grid.navbar2-grid-4x3 .navbar2-nested-link {
+    padding: 8px 10px;
+    font-size: 11px;
+    min-height: 40px;
+  }
+
+  .navbar2-nested-dropdown-simple {
+    width: calc(100vw - 20px) !important;
+    padding: 12px;
+  }
+}
+
+/* Menu 3 Grid - Clean styling for nested links */
+.navbar2-nested-dropdown-grid.navbar2-grid-4x3 .navbar2-nested-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 18px;
+  text-decoration: none;
+  color: white;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 0px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  min-height: 55px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow: hidden;
+  min-width: 300px;
+}
+
+.navbar2-nested-dropdown-grid.navbar2-grid-4x3 .navbar2-nested-link:hover {
+  background-color: rgba(255, 0, 0, 0.1);
+  border-color: rgba(226, 55, 55, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  color: #ff4444;
+}
+
+/* Menu 4 Simple - Clean styling for nested links */
+.navbar2-nested-dropdown-simple .navbar2-nested-link {
+  display: block;
+  padding: 6px 8px;
+  text-decoration: none;
+  color: white;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 0px;
+  font-size: 14px;
+  font-weight: 400;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  min-width: 200px;
+}
+
+.navbar2-nested-dropdown-simple .navbar2-nested-link:last-child {
+  margin-bottom: 0;
+}
+
+.navbar2-nested-dropdown-simple .navbar2-nested-link:hover {
+  background-color: rgba(255, 1, 1, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(4px);
+}
+
+/* Ensure no overflow on containers */
+.navbar2-drive {
+  overflow-x: visible;
+}
+
+.navbar2-dropdown {
+  overflow: visible;
+}
+
+.navbar2-nested-wrapper {
+  position: relative;
+}
+
+/* Additional safety measures */
+body {
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.navbar2-nested-btn::after {
+  content: "▶";
+  /* or ↓ or some FontAwesome icon */
+  padding-left: 8px;
+}
+
+/* Show states for nested dropdowns */
+.navbar2-nested-dropdown-grid.navbar2-show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.navbar2-nested-dropdown-simple.navbar2-show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+/* Remove underline and set base color */
+.navbar2-dropdown-link,
+.navbar2-nested-link,
+.navbar2-dropdown-item {
+  text-decoration: none;
+  /* Removes underline */
+  color: #e0e0e0;
+  /* Sets default light gray color */
+}
+
+/* Maintain no underline on hover, but change color */
+.navbar2-dropdown-link:hover,
+.navbar2-nested-link:hover,
+.navbar2-dropdown-item:hover,
+.navbar2-dropbtn:hover {
+  text-decoration: none;
+  /* Still no underline on hover */
+  color: #ff4444;
+  /* Hover color (e.g., red) */
+}
+
+
+.my-link-button {
+  text-decoration: none;
+  color: inherit;
+  /* Optional: keeps the text color consistent */
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+
+.navbar2-drive-right>div {
+  margin-right: 0.5rem;
+  /* reduce horizontal space between top-level menus */
+}
+
+.navbar2-dropbtn {
+  padding: 0.4rem 0.8rem;
+  /* reduce padding inside buttons */
+  margin: 0;
+  /* remove extra margin if any */
+}
+
+.my-link-button {
+  margin: 0;
+  padding: 0;
+}
+
+.navbar2-dropdown {
+  margin-left: 0.5rem;
+  /* or 0 */
+}
+
+
+/* Default (white) */
+.navbar2-dropbtn.my-link-button {
+  color: white;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* On active (red) */
+.active-link {
+  color: red !important;
+  font-weight: normal;
+}
+
+
+
+
+
+
+
+
+.admin-panel-btn {
+  background-color: #c21b29;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.admin-panel-btn:hover {
+  background-color: #a01622;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.service-panel-btn {
+  background-color: #1a1a1a;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #c21b29;
+  transition: all 0.2s ease;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.service-panel-btn:hover {
+  background-color: #c21b29;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(194, 27, 41, 0.3);
+}
+
+.service-panel-btn:active,
+.admin-panel-btn:active {
+  transform: translateY(0);
+}
+
+/* Navbar2 Responsive Additions */
+.navbar2-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 30px;
+  height: 21px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-right: 15px;
+}
+
+.navbar2-bar {
+  width: 100%;
+  height: 3px;
+  background-color: #fff;
+  border-radius: 10px;
+}
+
+.navbar2-sidebar {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 280px;
+  height: 100vh;
+  background-color: #111;
+  z-index: 2000;
+  transition: left 0.3s ease-in-out;
+  padding: 4rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar2-sidebar.active {
+  left: 0;
+}
+
+.navbar2-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  font-size: 2rem;
+  color: #fff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.navbar2-sidebar-link {
+  color: #fff;
+  text-decoration: none;
+  padding: 1rem 0;
+  font-size: 1.1rem;
+  border-bottom: 1px solid #333;
+}
+
+.navbar2-sidebar-link:hover {
+  color: #ff4444;
+}
+
+/* Style Admin Panel in Navbar2 sidebar as a button */
+.navbar2-sidebar .navbar2-admin-btn {
+  background-color: #c21b29 !important;
+  color: #fff !important;
+  margin: 15px 0 !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+  text-align: center !important;
+  font-weight: bold !important;
+  display: block !important;
+  border: none !important;
+  box-shadow: 0 4px 10px rgba(194, 27, 41, 0.3);
+  transition: all 0.2s ease !important;
+}
+
+.navbar2-sidebar .navbar2-admin-btn:hover {
+  background-color: #a01622 !important;
+  transform: translateY(-2px);
+}
+
+.navbar2-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1999;
+}
+
+@media (max-width: 768px) {
+  .navbar2-hamburger {
+    display: flex;
+  }
+
+  .header-links-desktop {
+    display: none !important;
+  }
+}

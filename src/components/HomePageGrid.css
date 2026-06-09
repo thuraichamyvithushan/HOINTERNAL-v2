@@ -1,0 +1,420 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+
+
+.under {
+  position: relative;
+  display: inline-block;
+  font-size: 24px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  transition: color 0.3s ease;
+  text-align: center;
+  margin-bottom: -5px;
+}
+
+
+
+
+
+/* Tiles */
+.tile-image {
+  height: 10rem;
+  background-color: #cbd5e0;
+  border-radius: 0.5rem;
+}
+
+.tile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 1rem;
+}
+
+.tile-heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.tile-link {
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  background-color: #cbd5e0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #2d3748;
+}
+
+.card-body {
+  box-shadow: rgba(0, 0, 0, 0.4) 0px 2px 4px,
+    rgba(0, 0, 0, 0.3) 0px 7px 13px -3px,
+    rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
+  border-radius: 8px;
+  border: none;
+}
+
+.card {
+  border: none;
+}
+
+.anime-2 {
+  transition: all 0.2s ease;
+}
+
+.anime-2:hover {
+  transform: scale(0.9);
+}
+
+img {
+  object-fit: contain;
+}
+
+h4 {
+  font-size: 15px;
+}
+
+.home_card {
+  width: 240px;
+}
+
+.home_row {
+  justify-self: center;
+}
+
+.mt-5 {
+  margin-top: 0px !important;
+}
+
+
+.market,
+.sales,
+.oso {
+  background: url('../../public/images/background.png');
+  /* Using the main background subtle texture */
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 40px 24px;
+  margin: 30px 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  transition: all 0.4s ease;
+  backdrop-filter: blur(8px);
+  text-align: center;
+  overflow: hidden;
+}
+
+.oso {
+  margin-bottom: 20px;
+}
+
+.market:hover,
+.sales:hover,
+.oso:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.18);
+
+}
+
+.market h2,
+.sales h2,
+.oso h2 {
+  color: #672423;
+  text-align: center;
+}
+
+.center-card {
+  display: flex;
+  justify-content: center;
+}
+
+.col-xl-4 {
+  width: 20%;
+}
+
+.main-cent {
+  display: flex;
+  justify-content: center;
+}
+
+.container.main-cent {
+  display: flex;
+  flex-direction: column;
+}
+
+.container.main-event {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6%;
+}
+
+.cent {
+  width: 100%;
+}
+
+/* .col-xl-3 {
+  width: 25%;
+} */
+
+.row.no-gutters {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.col-seven {
+  flex: 0 0 calc(100% / 7);
+  max-width: calc(100% / 7);
+}
+
+
+/* Main Dashboard Container */
+.container.main-cent {
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  padding: 0 40px !important;
+}
+
+/* Standard Dashboard Tile Grid Wrapper */
+.dashboard-tile-col {
+  padding: 0 !important;
+  display: contents !important;
+  /* Let the card/link be the direct child for Grid layout */
+}
+
+/* Ensure links don't mess up the grid and have no underlines */
+.dashboard-tile-card a,
+.dashboard-tile-card a:hover,
+.dashboard-tile-card a:visited {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-decoration: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  color: inherit !important;
+}
+
+.dashboard-tile-card a h4 {
+  text-decoration: none !important;
+}
+
+/* Flexible Centering System - Adjusted for smaller gaps */
+.home_row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  /* Reduced from 20px */
+  justify-content: center !important;
+  padding: 15px 0 !important;
+  width: 100% !important;
+}
+
+/* Desktop: Max width to keep ~6 per row (190px * 6 + 12px * 5) */
+@media (min-width: 1300px) {
+  .home_row {
+    max-width: 1200px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* Large Tablet/Laptop: Max width for ~4 per row */
+@media (max-width: 1299px) and (min-width: 1000px) {
+  .home_row {
+    max-width: 796px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* Tablet: Max width for ~3 per row */
+@media (max-width: 999px) and (min-width: 650px) {
+  .home_row {
+    max-width: 594px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* Mobile: 2 tiles per row */
+@media (max-width: 649px) {
+
+  .market,
+  .sales,
+  .oso {
+    padding: 24px 20px !important;
+    /* Increased horizontal padding to 20px */
+    margin: 15px 0 !important;
+    border-radius: 12px !important;
+  }
+
+  .under {
+    font-size: 18px !important;
+    margin-bottom: 5px !important;
+  }
+
+  .home_row {
+    grid-template-columns: repeat(1, 1fr) !important;
+    /* Single column */
+    gap: 15px !important;
+    padding: 10px 0 !important;
+  }
+
+  .dashboard-tile-card {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 160px !important;
+    /* Slightly taller for vertical stack */
+    padding: 20px !important;
+    border-radius: 12px !important;
+    flex-direction: column !important;
+    /* Vertical stack for better centering */
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  .dashboard-tile-card .image-container {
+    width: 80px !important;
+    height: 80px !important;
+    padding: 10px !important;
+    margin-bottom: 8px !important;
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .dashboard-tile-card h4 {
+    font-size: 15px !important;
+    height: auto !important;
+    text-align: center !important;
+    /* Center text on mobile */
+    margin: 0 !important;
+    line-clamp: 2 !important;
+  }
+
+  .container.main-cent {
+    padding: 0 25px !important;
+    /* Increased from 15px to 25px for better side margins */
+  }
+}
+
+/* Unified Tile Card - Force Absolute Uniformity */
+.dashboard-tile-card {
+  width: 190px !important;
+  height: 190px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  /* Slightly transparent premium look */
+  border-radius: 18px !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dashboard-tile-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dashboard-tile-card .image-container {
+  width: 100px !important;
+  height: 100px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  margin-bottom: 12px !important;
+  background: #f8fafc !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  box-sizing: border-box !important;
+}
+
+.dashboard-tile-card img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  /* Prevents stretching */
+}
+
+.dashboard-tile-card h4 {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  text-align: center !important;
+  color: #333 !important;
+  line-height: 1.2 !important;
+  line-clamp: 2 !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  height: 34px !important;
+  /* Fixed height to keep icons aligned across tiles */
+}
+
+.mt-3 {
+  margin-top: 1rem !important;
+}
+
+.nested-nav-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 10px;
+  margin-bottom: 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nested-back-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+
+.nested-back-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateX(-4px);
+}
+
+.nested-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+hr {
+  border: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+  margin-bottom: 25px;
+}
