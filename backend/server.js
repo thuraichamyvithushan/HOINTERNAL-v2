@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 const multer = require('multer');
 const admin = require('firebase-admin');
+const crypto = require('crypto');
 
 // Initialize Firebase Admin SDK
 let credential;
@@ -508,6 +509,305 @@ app.post('/api/service-request', async (req, res) => {
     } catch (error) {
         console.error('Error handling service request:', error);
         res.status(500).json({ error: 'Failed to send service request. Please try again later.' });
+    }
+});
+
+//new codes by mn
+// CREATE INVITE LINK
+// app.post('/api/invites', async (req, res) => {
+//     try {
+//         const { email, role, country } = req.body;
+
+//         if (!email || !role || !country) {
+//             return res.status(400).json({
+//                 error: 'Email, role, and country are required'
+//             });
+//         }
+
+//         const normalizedEmail = email.toLowerCase().trim();
+
+//         const token = crypto.randomBytes(32).toString('hex');
+//         const tokenHash = crypto
+//             .createHash('sha256')
+//             .update(token)
+//             .digest('hex');
+
+//         const expiresAt = new Date();
+//         expiresAt.setDate(expiresAt.getDate() + 7);
+
+//         const inviteRef = await db.collection('invites').add({
+//             email: normalizedEmail,
+//             role,
+//             country,
+//             tokenHash,
+//             status: 'pending',
+//             createdAt: admin.firestore.FieldValue.serverTimestamp(),
+//             expiresAt,
+//             usedBy: null,
+//             usedAt: null
+//         });
+
+//         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+//         const inviteLink = `${frontendUrl}/#/accept-invite?inviteId=${inviteRef.id}&token=${token}`;
+
+//         res.status(200).json({
+//             success: true,
+//             inviteLink
+//         });
+
+//     } catch (error) {
+//         console.error('Error creating invite:', error);
+//         res.status(500).json({ error: error.message });
+//     }
+// });
+
+// CREATE INVITE LINK + SEND EMAIL
+app.post('/api/invites', async (req, res) => {
+    try {
+        const { email, role, country } = req.body;
+
+        if (!email || !role || !country) {
+            return res.status(400).json({
+                error: 'Email, role, and country are required'
+            });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+
+        const inviteRef = await db.collection('invites').add({
+            email: normalizedEmail,
+            role,
+            country,
+            tokenHash,
+            status: 'pending',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            expiresAt,
+            usedBy: null,
+            usedAt: null
+        });
+
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+        // Important: HashRouter needs /#/
+        const inviteLink = `${frontendUrl}/#/accept-invite?inviteId=${inviteRef.id}&token=${token}`;
+
+        const transporter = nodemailer.createTransport({
+            service: process.env.EMAIL_SERVICE,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        const mailOptions = {
+            from: `"Huntsman Optics Portal" <${process.env.EMAIL_USER}>`,
+            to: normalizedEmail,
+            subject: 'You are invited to Huntsman Optics Internal Portal',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; color: #333;">
+                    <div style="background: #1a1a1a; padding: 24px; text-align: center;">
+                        <h2 style="color: #ffffff; margin: 0;">Huntsman Optics</h2>
+                        <p style="color: #c21b29; margin: 8px 0 0;">Internal Portal Invitation</p>
+                    </div>
+
+                    <div style="padding: 28px; border: 1px solid #eee;">
+                        <h3 style="margin-top: 0;">You have been invited</h3>
+
+                        <p>
+                            You have been invited to join the Huntsman Optics Internal Portal.
+                        </p>
+
+                        <p>
+                            Your assigned role is <strong>${role}</strong> and your region is <strong>${country}</strong>.
+                        </p>
+
+                        <p>
+                            Please click the button below to create your account.
+                        </p>
+
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${inviteLink}"
+                               style="background: #c21b29; color: #ffffff; padding: 14px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                                Accept Invite
+                            </a>
+                        </div>
+
+                        <p style="font-size: 13px; color: #777;">
+                            This invitation will expire in 7 days.
+                        </p>
+
+                        <p style="font-size: 13px; color: #777;">
+                            If the button does not work, copy and paste this link into your browser:
+                        </p>
+
+                        <p style="font-size: 13px; word-break: break-all;">
+                            ${inviteLink}
+                        </p>
+                    </div>
+
+                    <div style="padding: 14px; font-size: 12px; color: #777; text-align: center;">
+                        This email was sent from the Huntsman Optics Internal Portal.
+                    </div>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({
+            success: true,
+            inviteLink,
+            message: 'Invite created and email sent successfully'
+        });
+
+    } catch (error) {
+        console.error('Error creating invite:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// ACCEPT INVITE
+app.post('/api/invites/accept', async (req, res) => {
+    try {
+        const { inviteId, token, uid, name } = req.body;
+
+        if (!inviteId || !token || !uid) {
+            return res.status(400).json({
+                error: 'Invite ID, token, and UID are required'
+            });
+        }
+
+        const inviteRef = db.collection('invites').doc(inviteId);
+        const inviteSnap = await inviteRef.get();
+
+        if (!inviteSnap.exists) {
+            return res.status(404).json({ error: 'Invite not found' });
+        }
+
+        const invite = inviteSnap.data();
+
+        if (invite.status !== 'pending') {
+            return res.status(400).json({ error: 'Invite already used' });
+        }
+
+        if (invite.expiresAt.toDate() < new Date()) {
+            return res.status(400).json({ error: 'Invite expired' });
+        }
+
+        const tokenHash = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        if (tokenHash !== invite.tokenHash) {
+            return res.status(400).json({ error: 'Invalid invite token' });
+        }
+
+        const userRecord = await admin.auth().getUser(uid);
+
+        if (
+            !userRecord.email ||
+            userRecord.email.toLowerCase() !== invite.email.toLowerCase()
+        ) {
+            return res.status(403).json({
+                error: 'This invite is only valid for the invited email address'
+            });
+        }
+
+        await admin.auth().setCustomUserClaims(uid, {
+            role: invite.role,
+            country: invite.country
+        });
+
+        await db.collection('users').doc(uid).set(
+            {
+                name: name || userRecord.displayName || '',
+                email: invite.email,
+                role: invite.role,
+                country: invite.country,
+                status: 'active',
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            },
+            { merge: true }
+        );
+
+        await inviteRef.update({
+            status: 'used',
+            usedBy: uid,
+            usedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Invite accepted successfully'
+        });
+
+    } catch (error) {
+        console.error('Error accepting invite:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// GET ALL INVITES
+app.get('/api/invites', async (req, res) => {
+    try {
+        const snapshot = await db
+            .collection('invites')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        const invites = snapshot.docs.map(doc => {
+            const data = doc.data();
+
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate?.().toISOString() || null,
+                expiresAt: data.expiresAt?.toDate?.().toISOString() || null,
+                usedAt: data.usedAt?.toDate?.().toISOString() || null
+            };
+        });
+
+        res.status(200).json(invites);
+
+    } catch (error) {
+        console.error('Error fetching invites:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// CANCEL INVITE
+app.patch('/api/invites/:inviteId/cancel', async (req, res) => {
+    try {
+        const { inviteId } = req.params;
+
+        await db.collection('invites').doc(inviteId).update({
+            status: 'cancelled',
+            cancelledAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Invite cancelled successfully'
+        });
+
+    } catch (error) {
+        console.error('Error cancelling invite:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

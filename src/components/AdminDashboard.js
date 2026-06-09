@@ -7,6 +7,7 @@ import { API_URL } from "../config";
 import DeviceManager from "./DeviceManager";
 import DashboardTileManager from "./DashboardTileManager";
 import "./AdminDashboard.css";
+import InviteManager from "./InviteManager";
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -110,6 +111,12 @@ const AdminDashboard = () => {
         >
           DASHBOARD TILES
         </button>
+        <button
+  className={`admin-tab-btn ${activeView === "invites" ? "active" : ""}`}
+  onClick={() => setActiveView("invites")}
+>
+  INVITES
+</button>
       </div>
 
       {activeView === "users" ? (
@@ -186,11 +193,13 @@ const AdminDashboard = () => {
             </>
           )}
         </>
-      ) : activeView === "products" ? (
-        <DeviceManager />
-      ) : (
-        <DashboardTileManager />
-      )}
+     ) : activeView === "products" ? (
+  <DeviceManager />
+) : activeView === "tiles" ? (
+  <DashboardTileManager />
+) : (
+  <InviteManager />
+)}
     </div>
   );
 };

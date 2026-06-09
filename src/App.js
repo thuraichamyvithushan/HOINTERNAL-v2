@@ -42,6 +42,8 @@ import InfluencerPage from './components/Influencerdashboard';
 import InfluencerPageNZ from './components/InfluencerdashboardNZ';
 import { getRoleHomePath } from './utils/authHelpers';
 
+import AcceptInvite from "./components/AcceptInvite";
+
 
 import ScrollToTop from './components/ScrollToTop';
 
@@ -67,6 +69,8 @@ function App() {
                 : <SignInSignUpForm />
             }
           />
+
+          <Route path="/accept-invite" element={<AcceptInvite />} />
 
           <Route
             path="/*"
@@ -179,6 +183,10 @@ function App() {
                   <Route path="/img3" element={<><Navbar2 /><Image3 /></>} />
                   <Route path="/img2" element={<><Navbar2 /><Image2 /></>} />
                   <Route path="/img1" element={<><Navbar2 /><Image1 /></>} />
+
+                  
+
+
                 </Routes>
               </PrivateRoute>
             }

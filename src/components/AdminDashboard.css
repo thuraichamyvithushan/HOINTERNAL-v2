@@ -252,3 +252,31 @@
     font-size: 13px;
   }
 }
+
+
+
+.invite-form-box {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
+}
+
+.invite-input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  min-width: 240px;
+}
+
+.invite-link-box {
+  margin: 20px 0;
+  padding: 15px;
+  background: #f7f7f7;
+  border-radius: 8px;
+}
+
+.invite-link-box input {
+  width: 100%;
+  margin-bottom: 10px;
+}
