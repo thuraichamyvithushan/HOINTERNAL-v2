@@ -596,7 +596,7 @@ app.post('/api/invites', async (req, res) => {
             usedAt: null
         });
 
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = process.env.FRONTEND_URL || 'https://hointernal.com';
 
         // Important: HashRouter needs /#/
         const inviteLink = `${frontendUrl}/#/accept-invite?inviteId=${inviteRef.id}&token=${token}`;
