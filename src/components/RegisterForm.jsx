@@ -72,7 +72,7 @@ const RegisterForm = ({ onSuccessfulRegistration }) => {
       <div className="role-selection-container">
         <h3 style={{ marginBottom: '20px', fontWeight: '800', textAlign: 'left' }}>SELECT YOUR ROLE</h3>
         <div className="role-grid">
-          {['staff', 'representative', 'dealer', 'influencer'].map((r) => (
+          {['staff', 'representative', 'dealer', 'influencer','accounts & hr'].map((r) => (
             <button key={r} className="cmn-btn" onClick={() => handleRoleClick(r)}>
               {r}
             </button>

@@ -46,6 +46,8 @@ import AcceptInvite from "./components/AcceptInvite";
 
 
 import ScrollToTop from './components/ScrollToTop';
+import Accounts_hr_Page from './components/Accounts-hr-dashboard';
+import Accounts_hr_Page_nz from './components/Accounts-hr-dashboardNZ';
 
 function App() {
   const { user, loading } = useContext(AuthContext);
@@ -97,6 +99,25 @@ function App() {
                   />
 
                   <Route
+                    path="/accounts-hr-page"
+                    element={
+                      <RoleProtectedRoute user={user} allowedRoles={['accounts-hr', 'admin']} allowedCountries={['Australia']}>
+                      
+                        <Accounts_hr_Page/>
+                      </RoleProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/accounts-hr-page-nz"
+                    element={
+                      <RoleProtectedRoute user={user} allowedRoles={['dealer', 'admin']} allowedCountries={['New Zealand', 'Newzealand', 'NZ']}>
+                        <Accounts_hr_Page_nz />
+                      </RoleProtectedRoute>
+                    }
+                  />
+
+                  <Route
                     path="/representative-page"
                     element={
                       <RoleProtectedRoute user={user} allowedRoles={['representative', 'admin']} allowedCountries={['Australia']}>
@@ -122,6 +143,7 @@ function App() {
                       </RoleProtectedRoute>
                     }
                   />
+                  
 
                   <Route
                     path="/representative-page-nz"

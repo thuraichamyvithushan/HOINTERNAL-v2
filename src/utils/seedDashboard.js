@@ -11,6 +11,8 @@ const DEFAULT_CONFIGS = {
     "rep-nz": { pageId: "rep-nz", sections: [] },
     "dealer-au": { pageId: "dealer-au", sections: [] },
     "dealer-nz": { pageId: "dealer-nz", sections: [] },
+    "accounts-hr-au": { pageId: "accounts-hr-au", sections: [] },
+    "accounts-hr-nz": { pageId: "accounts-hr-nz", sections: [] },
 };
 
 /**

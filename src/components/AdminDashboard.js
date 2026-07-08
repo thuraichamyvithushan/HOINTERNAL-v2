@@ -151,6 +151,7 @@ const AdminDashboard = () => {
                             <option value="influencer">Influencer</option>
                             <option value="staff">Staff</option>
                             <option value="admin">Admin</option>
+                            <option value="accounts-hr">Accounts & HR</option>
                           </select>
                         </td>
                         <td>

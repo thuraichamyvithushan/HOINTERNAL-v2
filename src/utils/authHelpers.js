@@ -11,6 +11,7 @@ export const getRoleHomePath = (user) => {
         case 'representative': return isNZ ? '/representative-page-nz' : '/representative-page';
         case 'influencer': return isNZ ? '/influencer-page-nz' : '/influencer-page';
         case 'staff': return isNZ ? '/home-nz' : '/home';
+         case 'accounts-hr': return isNZ ? '/accounts-hr-page-nz' : '/accounts-hr-page';
         default: return isNZ ? '/home-nz' : '/home';
     }
 };

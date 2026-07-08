@@ -418,3 +418,62 @@ hr {
   background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
   margin-bottom: 25px;
 }
+
+
+
+/* search bar */
+.dashboard-search-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin: 20px 0 35px;
+}
+
+.dashboard-search-input {
+    width: 100%;
+    max-width: 520px;
+    height: 48px;
+    border: 1px solid #ddd;
+    border-radius: 50px;
+    padding: 0 22px;
+    font-size: 15px;
+    outline: none;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    transition: all 0.25s ease;
+}
+
+.dashboard-search-input:focus {
+    border-color: #111;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+
+/* back button */
+.dashboard-topbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin: 20px 0 10px;
+}
+
+.dashboard-back-btn {
+    border: none;
+    background: #111;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.dashboard-back-btn:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+}
+
+.dashboard-back-btn:active {
+    transform: translateY(0);
+}
