@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import useDashboardConfig from "../utils/useDashboardConfig";
 import Loader from "./Loader";
 
+
+
 const TileLink = ({ tile, children }) => {
     if (tile.linkType === "internal") return <Link to={tile.link}>{children}</Link>;
     if (tile.linkType === "external") return <a href={tile.link} target="_blank" rel="noreferrer">{children}</a>;
@@ -62,6 +64,7 @@ const DynamicDashboardGrid = ({ pageId }) => {
 
     // navStack only stores the IDs to follow: ['root', 'tile-id-1', 'tile-id-2']
     const [navStack, setNavStack] = React.useState([{ id: "root", title: "Home" }]);
+    const [searchTerm, setSearchTerm] = React.useState("");
 
     if (loading) return <Loader />;
 
@@ -100,6 +103,18 @@ const DynamicDashboardGrid = ({ pageId }) => {
 
     const { title: currentLevelTitle, sections: displaySections } = resolveCurrentLevel();
 
+
+    const filteredSections = (displaySections || [])
+    .map((section) => ({
+        ...section,
+        tiles: (section.tiles || []).filter((tile) =>
+            tile.title?.toLowerCase().includes(searchTerm.toLowerCase())
+        ),
+    }))
+    .filter((section) => section.tiles.length > 0);
+
+
+
     const handleNestedClick = (tile) => {
         setNavStack(prev => [...prev, { id: tile.id, title: tile.title }]);
         window.scrollTo(0, 0);
@@ -118,32 +133,57 @@ const DynamicDashboardGrid = ({ pageId }) => {
     };
 
     return (
-        <div className="container main-cent">
+    <div className="container main-cent">
+        <div className="dashboard-topbar">
+    {navStack.length > 1 && (
+        <button
+            className="dashboard-back-btn"
+            onClick={handleBack}
+        >
+            ← Back
+        </button>
+    )}
+</div>
 
+        <div className="dashboard-search-wrap">
+            <input
+                type="text"
+                className="dashboard-search-input"
+                placeholder="Search dashboard..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
 
-            {displaySections.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                    <p>No tiles found in this section.</p>
-                </div>
-            )}
+        {filteredSections.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                <p>No tiles found.</p>
+            </div>
+        )}
 
-            <div className="cent">
-                {displaySections.map((section) => (
-                    <div key={section.id}>
-                        <div className={getSectionClass(section.title)}>
-                            <h2 className="under">{section.title}</h2>
-                            <hr />
-                            <div className="row no-gutters home_row">
-                                {(section.tiles || []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((tile) => (
-                                    <TileCard key={tile.id} tile={tile} onNestedClick={handleNestedClick} />
+        <div className="cent">
+            {filteredSections.map((section) => (
+                <div key={section.id}>
+                    <div className={getSectionClass(section.title)}>
+                        <h2 className="under">{section.title}</h2>
+                        <hr />
+                        <div className="row no-gutters home_row">
+                            {(section.tiles || [])
+                                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                                .map((tile) => (
+                                    <TileCard
+                                        key={tile.id}
+                                        tile={tile}
+                                        onNestedClick={handleNestedClick}
+                                    />
                                 ))}
-                            </div>
                         </div>
                     </div>
-                ))}
-            </div>
+                </div>
+            ))}
         </div>
-    );
+    </div>
+);
 };
 
 export default DynamicDashboardGrid;

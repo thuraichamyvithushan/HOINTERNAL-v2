@@ -11,6 +11,8 @@ const PAGE_OPTIONS = [
     { id: "rep-nz", label: "Representative — New Zealand" },
     { id: "dealer-au", label: "Dealer — Australia" },
     { id: "dealer-nz", label: "Dealer — New Zealand" },
+    { id: "accounts-hr-au", label: "Accounts & HR — Australia" },
+    { id: "accounts-hr-nz", label: "Accounts & HR — New Zealand" },
 ];
 
 const generateId = () => `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

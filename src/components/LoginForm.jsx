@@ -34,12 +34,12 @@ const LoginForm = ({ onForgotPassword }) => {
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const user = userCredential.user;
 
-      if (!user.emailVerified) {
-        await auth.signOut();
-        toast.error('Please verify your email address before logging in.');
-        setIsLoading(false);
-        return;
-      }
+      // if (!user.emailVerified) {
+      //   await auth.signOut();
+      //   toast.error('Please verify your email address before logging in.');
+      //   setIsLoading(false);
+      //   return;
+      // }
 
       // Fetch role from Firestore
       const userDoc = await firestore.collection("users").doc(user.uid).get();

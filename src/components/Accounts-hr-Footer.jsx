@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faPhoneVolume } from '@fortawesome/free-solid-svg-icons';
 import { faFacebook, faInstagram, faYoutube, faTiktok, faLinkedin } from '@fortawesome/free-brands-svg-icons';
 
-const DealerFooter = () => {
+const Accounts_hr_Footer = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -129,4 +129,4 @@ const DealerFooter = () => {
   );
 };
 
-export default DealerFooter;
+export default Accounts_hr_Footer;

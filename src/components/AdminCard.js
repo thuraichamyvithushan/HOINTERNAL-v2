@@ -8,6 +8,7 @@ const AdminCard = () => {
     { title: "DEALER AU", link: "/dealer-page", color: "#960505ff" },
     { title: "REP AU", link: "/representative-page", color: "#870303ff" },
     { title: "INFLUENCER AU", link: "/influencer-page", color: "#600202ff" },
+    { title: "ACCOUNTS & HR", link: "/accounts-hr-page", color: "#600202ff" },
   ];
 
   const nzCards = [
@@ -15,6 +16,7 @@ const AdminCard = () => {
     { title: "DEALER NZ", link: "/dealer-page-nz", color: "#960505ff" },
     { title: "REP NZ", link: "/representative-page-nz", color: "#870303ff" },
     { title: "INFLUENCER NZ", link: "/influencer-page-nz", color: "#600202ff" },
+    // { title: "ACCOUNTS & HR NZ", link: "/accounts-hr-page-nz", color: "#600202ff" },
   ];
 
   return (
