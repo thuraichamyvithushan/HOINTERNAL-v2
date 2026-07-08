@@ -1,11 +1,11 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import { API_URL } from '../../config';
 import { firestore } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCloudUploadAlt, faFileUpload, faCheckCircle, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faCloudUploadAlt, faFileUpload, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import { getUploadErrorMessage, uploadFootageFiles } from '../../utils/uploadFootage';
 import './InfluencerDashboardNZ.css';
 
 const UploadFootageNZ = (props) => {
@@ -19,9 +19,24 @@ const UploadFootageNZ = (props) => {
     const [ausState, setAusState] = useState(''); // Reusing variable for NZ region
     const [visibility, setVisibility] = useState('public');
     const [uploading, setUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [uploadedCount, setUploadedCount] = useState(0);
+    const [uploadMessage, setUploadMessage] = useState(null);
     const [deviceOptions, setDeviceOptions] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [showDeviceDropdown, setShowDeviceDropdown] = useState(false);
+
+    const uploadMessageStyles = uploadMessage?.type === 'success'
+        ? {
+            border: '1px solid #14532d',
+            backgroundColor: 'rgba(34, 197, 94, 0.12)',
+            color: '#bbf7d0'
+        }
+        : {
+            border: '1px solid #7f1d1d',
+            backgroundColor: 'rgba(239, 68, 68, 0.12)',
+            color: '#fecaca'
+        };
 
     const nzAnimalOptionsList = [
         "Red Deer/Stag", "Himalayan Tahr", "Alpine Chamois", "Fallow Deer",
@@ -72,6 +87,7 @@ const UploadFootageNZ = (props) => {
     const handleFileChange = (e) => {
         if (e.target.files.length > 0) {
             setFiles(Array.from(e.target.files));
+            setUploadMessage(null);
         }
     };
 
@@ -82,41 +98,37 @@ const UploadFootageNZ = (props) => {
             return;
         }
 
+        if (!user?.uid) {
+            toast.error('Please sign in again before uploading footage.');
+            return;
+        }
+
         setUploading(true);
+        setProgress(0);
+        setUploadedCount(0);
+        setUploadMessage(null);
 
         try {
-            const uploadPromises = files.map(async (file) => {
-                return new Promise((resolve, reject) => {
-                    const formData = new FormData();
-                    formData.append('video', file);
-                    formData.append('deviceName', deviceName);
-                    formData.append('species', species);
-                    formData.append('activityType', activityType);
-                    formData.append('description', description);
-                    formData.append('location', location);
-                    formData.append('ausState', ausState); // NZ region passed as ausState for compatibility
-                    formData.append('visibility', visibility);
-                    formData.append('region', 'NZ');
-                    formData.append('userId', user.uid);
-                    formData.append('userName', user.displayName || user.email?.split('@')[0] || 'Influencer');
-                    formData.append('userPhoto', user.photoURL || '');
-                    formData.append('originalFileName', file.name);
-
-                    fetch(`${API_URL}/api/upload`, {
-                        method: 'POST',
-                        body: formData
-                    })
-                        .then(response => {
-                            if (!response.ok) throw new Error('Upload failed');
-                            return response.json();
-                        })
-                        .then(data => data.success ? resolve() : reject(new Error(data.error)))
-                        .catch(reject);
-                });
+            await uploadFootageFiles({
+                files,
+                user,
+                metadata: {
+                    deviceName,
+                    species,
+                    activityType,
+                    description,
+                    location,
+                    ausState,
+                    visibility,
+                    region: 'NZ'
+                },
+                onProgress: setProgress,
+                onFileComplete: () => setUploadedCount((count) => count + 1)
             });
-
-            await Promise.all(uploadPromises);
-            toast.success(`Successfully uploaded ${files.length} NZ video(s)!`);
+            setUploadMessage({
+                type: 'success',
+                text: `Successfully uploaded ${files.length} NZ video(s).`
+            });
             setFiles([]);
             setDeviceName('');
             setSpecies('');
@@ -125,10 +137,15 @@ const UploadFootageNZ = (props) => {
             setLocation('');
             setAusState('');
             setVisibility('public');
+            setProgress(0);
+            setUploadedCount(0);
             if (props.onComplete) props.onComplete();
         } catch (error) {
             console.error('Upload failed:', error);
-            toast.error('One or more uploads failed.');
+            setUploadMessage({
+                type: 'error',
+                text: getUploadErrorMessage(error)
+            });
         } finally {
             setUploading(false);
         }
@@ -366,7 +383,7 @@ const UploadFootageNZ = (props) => {
                         </div>
                     </div>
 
-                    <div className={`upload-dropzone ${files.length > 0 ? 'has-file' : ''}`}>
+                    <div className={`upload-dropzone ${files.length > 0 || uploading || uploadMessage ? 'has-file' : ''}`}>
                         {files.length === 0 ? (
                             <div className="dropzone-empty">
                                 <FontAwesomeIcon icon={faFileUpload} size="3x" className="icon-faint" />
@@ -386,7 +403,51 @@ const UploadFootageNZ = (props) => {
                             <div className="dropzone-ready">
                                 <FontAwesomeIcon icon={faCheckCircle} size="3x" className="icon-success" />
                                 <p className="file-name">{files.length} NZ video(s) selected</p>
-                                <button type="button" onClick={() => setFiles([])} className="change-button" disabled={uploading}>Clear All</button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setFiles([]);
+                                        setUploadMessage(null);
+                                    }}
+                                    className="change-button"
+                                    disabled={uploading}
+                                >
+                                    Clear All
+                                </button>
+                            </div>
+                        )}
+
+                        {uploading && (
+                            <div style={{ width: '100%', marginTop: '1.25rem' }}>
+                                <p style={{ margin: '0 0 0.35rem 0', color: '#f3f4f6', fontSize: '0.95rem', fontWeight: 700, textAlign: 'center' }}>
+                                    Uploaded {uploadedCount} of {files.length} video(s)
+                                </p>
+                                <p style={{ margin: '0 0 0.75rem 0', color: '#fca5a5', fontSize: '0.9rem', fontWeight: 700, textAlign: 'center' }}>
+                                    {progress}%
+                                </p>
+                                <div className="progress-bar-container" style={{ marginTop: 0 }}>
+                                    <div
+                                        className="progress-bar-fill"
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {uploadMessage && (
+                            <div
+                                style={{
+                                    width: '100%',
+                                    marginTop: '1rem',
+                                    padding: '0.85rem 1rem',
+                                    borderRadius: '0.75rem',
+                                    fontSize: '0.9rem',
+                                    lineHeight: 1.5,
+                                    textAlign: 'center',
+                                    ...uploadMessageStyles
+                                }}
+                            >
+                                {uploadMessage.text}
                             </div>
                         )}
                     </div>
@@ -394,6 +455,7 @@ const UploadFootageNZ = (props) => {
                     <button type="submit" disabled={uploading || files.length === 0 || !deviceName} className="upload-button-primary" style={{ marginTop: '2.5rem' }}>
                         {uploading ? <span>Uploading...</span> : <span>Upload NZ Footage</span>}
                     </button>
+
                 </div>
             </form>
         </div>

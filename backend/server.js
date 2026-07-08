@@ -155,6 +155,58 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     }
 });
 
+app.post('/api/footage', async (req, res) => {
+    try {
+        const {
+            deviceName,
+            species,
+            activityType,
+            description,
+            location,
+            ausState,
+            userId,
+            userName,
+            userPhoto,
+            originalFileName,
+            visibility,
+            region,
+            videoUrl,
+            storagePath
+        } = req.body;
+
+        if (!userId || !videoUrl || !storagePath || !originalFileName) {
+            return res.status(400).json({
+                error: 'userId, videoUrl, storagePath, and originalFileName are required'
+            });
+        }
+
+        const newDoc = {
+            deviceName: deviceName || '',
+            species: species || '',
+            activityType: activityType || 'hunting',
+            description: description || '',
+            location: location || '',
+            ausState: ausState || 'Unknown',
+            userId,
+            userName: userName || 'Anonymous',
+            userPhoto: userPhoto || '',
+            videoUrl,
+            storagePath,
+            visibility: visibility || 'public',
+            region: region || 'AU',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            originalFileName
+        };
+
+        await db.collection('footage').add(newDoc);
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Error saving footage metadata:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // GET All Footage (Global Feed)
 app.get('/api/footage/all', async (req, res) => {
     try {
