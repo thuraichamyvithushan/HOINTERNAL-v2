@@ -49,17 +49,16 @@ const AdminPrivateVideosNZ = () => {
     if (selectedUserId) {
         return (
             <div className="admin-user-videos-view">
-                <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div className="admin-user-videos-header">
                     <button
                         onClick={() => setSelectedUserId(null)}
-                        className="modern-btn-secondary"
-                        style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        className="admin-back-btn"
                     >
                         <FontAwesomeIcon icon={faChevronLeft} />
                         Back to Users
                     </button>
-                    <h3 className="section-heading" style={{ margin: 0, borderLeft: 'none', paddingLeft: 0, color: '#fca5a5' }}>
-                        Viewing Private Videos for: <span style={{ color: 'white' }}>{selectedUserName}</span>
+                    <h3 className="admin-section-heading">
+                        Viewing Private Videos for: <span className="admin-section-heading-name">{selectedUserName}</span>
                     </h3>
                 </div>
 
@@ -72,7 +71,7 @@ const AdminPrivateVideosNZ = () => {
 
     return (
         <div className="admin-users-list">
-            <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>Select a user below to view their private uploaded footage.</p>
+            <p className="admin-users-intro">Select a user below to view their private uploaded footage.</p>
             <div className="admin-users-grid">
                 {usersList.map((u) => (
                     <div
@@ -83,7 +82,7 @@ const AdminPrivateVideosNZ = () => {
                             setSelectedUserName(u.displayName || u.name || u.email || 'Unknown User');
                         }}
                     >
-                        <FontAwesomeIcon icon={faUserCircle} size="2x" style={{ color: '#9ca3af' }} />
+                        <FontAwesomeIcon icon={faUserCircle} size="2x" className="admin-user-card-icon" />
                         <h4 className="admin-user-card-name">
                             {u.displayName || u.name || u.email || 'Unknown User'}
                         </h4>
@@ -94,7 +93,7 @@ const AdminPrivateVideosNZ = () => {
                 ))}
             </div>
             {usersList.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem' }}>
+                <div className="admin-users-empty">
                     No users found in the system.
                 </div>
             )}

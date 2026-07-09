@@ -13,7 +13,6 @@ const Hero = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const isNZ = user?.country?.toLowerCase() === "new zealand" || user?.country?.toLowerCase() === "nz";
   const heroImage = "/admin_hero_optics.png";
 
   const getMainFontSize = () => {

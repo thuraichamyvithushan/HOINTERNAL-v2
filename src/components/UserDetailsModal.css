@@ -41,9 +41,6 @@
   display: block;
 }
 
-
-
-
 /* Tablet (up to 768px) */
 @media (max-width: 768px) {
   .user-profile-container {

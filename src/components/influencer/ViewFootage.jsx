@@ -12,8 +12,7 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;
+    const [visibleCount, setVisibleCount] = useState(10);
     const [selectedVideo, setSelectedVideo] = useState(null);
     const [editingVideo, setEditingVideo] = useState(null);
     const [editForm, setEditForm] = useState({
@@ -83,10 +82,15 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
         }
     };
 
+    const formatActivityType = (activityType) => {
+        if (!activityType) return 'Clip';
+        return activityType.charAt(0).toUpperCase() + activityType.slice(1).toLowerCase();
+    };
+
     useEffect(() => {
         if (!user) return;
         fetchFootage();
-        setCurrentPage(1); // Reset to first page on filter/refresh change
+        setVisibleCount(10);
 
         // Polling every 10 seconds to mimic real-time snapshot
         const intervalId = setInterval(fetchFootage, 10000);
@@ -100,11 +104,12 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
         (video.location || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const totalPages = Math.ceil(filteredVideos.length / itemsPerPage);
-    const paginatedVideos = filteredVideos.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+    useEffect(() => {
+        setVisibleCount(10);
+    }, [searchTerm]);
+
+    const visibleVideos = filteredVideos.slice(0, visibleCount);
+    const hasMoreVideos = filteredVideos.length > visibleCount;
 
     if (loading) {
         return (
@@ -145,7 +150,7 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
                 </div>
             ) : (
                 <div className="video-grid">
-                    {paginatedVideos.map((video) => (
+                    {visibleVideos.map((video) => (
                         <div
                             key={video.id}
                             onClick={() => setSelectedVideo(video)}
@@ -162,7 +167,7 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
                                     </div>
                                 </div>
                                 <div className="hd-badge">
-                                    {video.activityType || 'Clip'}
+                                    {formatActivityType(video.activityType)}
                                 </div>
                             </div>
                             <div className="video-info">
@@ -182,7 +187,7 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
                                 <div className="video-meta">
                                     <div className="meta-item">
                                         <FontAwesomeIcon icon={faClock} />
-                                        <span style={{ textTransform: 'capitalize' }}>{video.activityType}</span>
+                                        <span>{formatActivityType(video.activityType)}</span>
                                     </div>
                                     <div className="meta-item">
                                         <FontAwesomeIcon icon={faClock} />
@@ -229,25 +234,13 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
                 </div>
             )}
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="pagination-controls">
+            {hasMoreVideos && (
+                <div className="load-more-wrap">
                     <button
-                        className="pagination-btn"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
+                        className="load-more-btn"
+                        onClick={() => setVisibleCount((prev) => prev + 10)}
                     >
-                        Previous
-                    </button>
-                    <div className="page-indicator">
-                        Page <span>{currentPage}</span> of {totalPages}
-                    </div>
-                    <button
-                        className="pagination-btn"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                    >
-                        Next
+                        Show More Videos
                     </button>
                 </div>
             )}
@@ -406,7 +399,7 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
                                     <FontAwesomeIcon icon={faClock} className="modal-meta-icon" />
                                     <div className="modal-meta-content">
                                         <span className="modal-meta-label">Activity</span>
-                                        <span className="modal-meta-value" style={{ textTransform: 'capitalize' }}>{selectedVideo.activityType || 'Clip'}</span>
+                                        <span className="modal-meta-value">{formatActivityType(selectedVideo.activityType)}</span>
                                     </div>
                                 </div>
                             </div>

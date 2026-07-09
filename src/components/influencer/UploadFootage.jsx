@@ -10,6 +10,7 @@ import './InfluencerDashboard.css';
 
 const UploadFootage = (props) => {
     const { user } = useContext(AuthContext);
+    const isRepresentative = user?.role === 'representative';
     const [files, setFiles] = useState([]);
     const [deviceName, setDeviceName] = useState('');
     const [species, setSpecies] = useState('');
@@ -139,8 +140,10 @@ const UploadFootage = (props) => {
                     <FontAwesomeIcon icon={faCloudUploadAlt} size="2x" />
                 </div>
                 <div>
-                    <h2 className="title-bold">Influencer Footage Upload</h2>
-                    <p className="subtitle-gray">Add your device testing or hunting footage</p>
+                    <h2 className="title-bold">{isRepresentative ? 'AU Regional Footage Upload' : 'Influencer Footage Upload'}</h2>
+                    <p className="subtitle-gray">
+                        {isRepresentative ? 'Add footage for the Australia regional dashboard' : 'Add your device testing or hunting footage'}
+                    </p>
                 </div>
             </div>
 
@@ -171,16 +174,16 @@ const UploadFootage = (props) => {
                                 left: 0,
                                 right: 0,
                                 zIndex: 50,
-                                backgroundColor: '#1f2937',
-                                border: '1px solid #374151',
-                                borderRadius: '0.375rem',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e2e2e2',
+                                borderRadius: '1rem',
                                 marginTop: '0.25rem',
                                 maxHeight: '200px',
                                 overflowY: 'auto',
                                 listStyle: 'none',
                                 padding: 0,
                                 margin: 0,
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+                                boxShadow: '0 18px 36px rgba(17, 17, 17, 0.12)'
                             }}>
                                 {deviceOptions
                                     .filter(d => d.toLowerCase().includes(deviceName.toLowerCase()))
@@ -195,11 +198,11 @@ const UploadFootage = (props) => {
                                             style={{
                                                 padding: '8px 12px',
                                                 cursor: 'pointer',
-                                                borderBottom: '1px solid #374151',
-                                                color: '#f3f4f6',
+                                                borderBottom: '1px solid #eeeeee',
+                                                color: '#1f1f1f',
                                                 fontSize: '0.9rem'
                                             }}
-                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#374151'}
+                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f6f6f6'}
                                             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                                         >
                                             {device}
@@ -233,16 +236,16 @@ const UploadFootage = (props) => {
                                 left: 0,
                                 right: 0,
                                 zIndex: 50,
-                                backgroundColor: '#1f2937',
-                                border: '1px solid #374151',
-                                borderRadius: '0.375rem',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e2e2e2',
+                                borderRadius: '1rem',
                                 marginTop: '0.25rem',
                                 maxHeight: '200px',
                                 overflowY: 'auto',
                                 listStyle: 'none',
                                 padding: 0,
                                 margin: 0,
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+                                boxShadow: '0 18px 36px rgba(17, 17, 17, 0.12)'
                             }}>
                                 {animalOptionsList
                                     .filter(a => a.toLowerCase().includes(species.toLowerCase()))
@@ -257,11 +260,11 @@ const UploadFootage = (props) => {
                                             style={{
                                                 padding: '8px 12px',
                                                 cursor: 'pointer',
-                                                borderBottom: '1px solid #374151',
-                                                color: '#f3f4f6',
+                                                borderBottom: '1px solid #eeeeee',
+                                                color: '#1f1f1f',
                                                 fontSize: '0.9rem'
                                             }}
-                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#374151'}
+                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f6f6f6'}
                                             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                                         >
                                             {animal}
@@ -352,7 +355,7 @@ const UploadFootage = (props) => {
                 <div className="upload-column">
                     <label className="label">Video Files (Multiple Selected Allowed)</label>
                     <div className="form-group full-width" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
-                        <label className="input-label" style={{ display: 'block', marginBottom: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.05em' }}>
+                        <label className="input-label" style={{ display: 'block', marginBottom: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.05em' }}>
                             Visibility Control
                         </label>
                         <div className="visibility-selector">
@@ -379,7 +382,7 @@ const UploadFootage = (props) => {
                         {files.length === 0 ? (
                             <div className="dropzone-empty">
                                 <FontAwesomeIcon icon={faFileUpload} size="3x" className="icon-faint" />
-                                <p className="text-gray-400">Select one or more videos for this device</p>
+                                <p className="text-gray-400 upload-helper-text">Select one or more videos for this device</p>
                                 <input
                                     type="file"
                                     accept="video/*"
@@ -400,7 +403,7 @@ const UploadFootage = (props) => {
                             <div className="dropzone-ready">
                                 <FontAwesomeIcon icon={faCheckCircle} size="3x" className="icon-success" />
                                 <p className="file-name">{files.length} video(s) selected</p>
-                                <div className="file-list-preview" style={{ fontSize: '0.8rem', color: '#9ca3af', maxHeight: '80px', overflowY: 'auto', marginBottom: '1rem' }}>
+                                <div className="file-list-preview" style={{ fontSize: '0.8rem', maxHeight: '80px', overflowY: 'auto', marginBottom: '1rem' }}>
                                     {files.map((f, i) => <div key={i}>{f.name}</div>)}
                                 </div>
                                 <button
@@ -419,10 +422,10 @@ const UploadFootage = (props) => {
 
                         {uploading && (
                             <div style={{ width: '100%', marginTop: '1.25rem' }}>
-                                <p style={{ margin: '0 0 0.35rem 0', color: '#f3f4f6', fontSize: '0.95rem', fontWeight: 700, textAlign: 'center' }}>
+                                <p className="upload-progress-status" style={{ margin: '0 0 0.35rem 0', fontSize: '0.95rem', fontWeight: 700, textAlign: 'center' }}>
                                     Uploaded {uploadedCount} of {files.length} video(s)
                                 </p>
-                                <p style={{ margin: '0 0 0.75rem 0', color: '#fca5a5', fontSize: '0.9rem', fontWeight: 700, textAlign: 'center' }}>
+                                <p className="upload-progress-percent" style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: 700, textAlign: 'center' }}>
                                     {progress}%
                                 </p>
                                 <div className="progress-bar-container" style={{ marginTop: 0 }}>

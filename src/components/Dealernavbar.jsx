@@ -26,6 +26,11 @@ import {
 
 const DealerNavbar = () => {
   const { user } = useContext(AuthContext);
+  const isRepresentative = user?.role === "representative";
+  const isNZRepresentative =
+    user?.country?.toLowerCase() === "new zealand" || user?.country?.toLowerCase() === "nz";
+  const influencerPath = isNZRepresentative ? "/influencer-page-nz" : "/influencer-page";
+  const influencerLabel = isNZRepresentative ? "NZ Influencer Page" : "AU Influencer Page";
   const searchBarStyle = {
     position: "absolute",
     top: "50%",
@@ -100,6 +105,20 @@ const DealerNavbar = () => {
               <li className="header-admin-item" style={{ listStyle: 'none' }}>
                 <Link to="/admin" className="admin-panel-btn">
                   Admin Panel
+                </Link>
+              </li>
+            )}
+            {isRepresentative && (
+              <li style={{ listStyle: "none", marginLeft: "25px" }}>
+                <Link
+                  to={influencerPath}
+                  className="service-panel-btn"
+                  style={{
+                    background: "linear-gradient(135deg, #dc2626, #991b1b)",
+                    boxShadow: "0 10px 25px rgba(220, 38, 38, 0.28)"
+                  }}
+                >
+                  {influencerLabel}
                 </Link>
               </li>
             )}
@@ -178,6 +197,12 @@ const DealerNavbar = () => {
               <Link to="/admin" className="menu_links sidebar-admin-link" onClick={closeSidebar}>
                 <FontAwesomeIcon icon={faUserCircle} />
                 <span style={{ marginLeft: "10px" }}>Admin Panel</span>
+              </Link>
+            )}
+            {isRepresentative && (
+              <Link to={influencerPath} className="menu_links sidebar-admin-link" onClick={closeSidebar}>
+                <FontAwesomeIcon icon={faCrosshairs} />
+                <span style={{ marginLeft: "10px" }}>{influencerLabel}</span>
               </Link>
             )}
             <hr style={{ margin: 0, padding: "5px", height: "10px", color: "#c21b29" }}></hr>

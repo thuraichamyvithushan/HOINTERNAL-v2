@@ -166,7 +166,7 @@ function App() {
                   <Route
                     path="/influencer-page"
                     element={
-                      <RoleProtectedRoute user={user} allowedRoles={['influencer', 'admin']} allowedCountries={['Australia']}>
+                      <RoleProtectedRoute user={user} allowedRoles={['influencer', 'representative', 'admin']} allowedCountries={['Australia']}>
                         <InfluencerPage />
                       </RoleProtectedRoute>
                     }
@@ -175,7 +175,7 @@ function App() {
                   <Route
                     path="/influencer-page-nz"
                     element={
-                      <RoleProtectedRoute user={user} allowedRoles={['influencer', 'admin']} allowedCountries={['New Zealand', 'Newzealand', 'NZ']}>
+                      <RoleProtectedRoute user={user} allowedRoles={['influencer', 'representative', 'admin']} allowedCountries={['New Zealand', 'Newzealand', 'NZ']}>
                         <InfluencerPageNZ />
                       </RoleProtectedRoute>
                     }

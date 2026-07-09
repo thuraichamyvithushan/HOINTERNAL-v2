@@ -15,6 +15,8 @@ const DashboardNZ = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const navigate = useNavigate();
+  const isRepresentative = user?.role === 'representative';
+  const dashboardTitle = isRepresentative ? 'NZ Regional Footage Hub' : 'NZ Influencer Hub';
 
   const handleRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -26,13 +28,22 @@ const DashboardNZ = () => {
   };
 
   return (
-    <div className="single-page-dashboard min-h-screen bg-gray-900 border-none">
+    <div
+      className="single-page-dashboard min-h-screen bg-gray-900 border-none"
+      style={{
+        backgroundImage: "linear-gradient(180deg, rgba(248, 248, 248, 0.16) 0%, rgba(242, 242, 242, 0.22) 100%), url('/images/background.png')",
+        backgroundPosition: 'center',
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       {/* Top Navbar */}
-      <header className="top-navbar shadow-lg">
+      <header className="top-navbar">
         <div className="logo-section">
           <h2 className="sidebar-title">
             <FontAwesomeIcon icon={faChartLine} />
-            NZ Influencer Hub
+            {dashboardTitle}
           </h2>
         </div>
 
@@ -54,7 +65,7 @@ const DashboardNZ = () => {
             <span className="divider-text">Private Storage (NZ)</span>
           </div>
           <div className="tile-header-simple flex justify-between items-center header-gap">
-            <h2 className="section-heading">my clips</h2>
+            <h2 className="section-heading">my uploads</h2>
           </div>
           <div className="view-grid-wrapper">
             <ViewFootageNZ visibilityFilter="private" refreshTrigger={refreshTrigger} />
@@ -100,7 +111,14 @@ const DashboardNZ = () => {
       {showUploadModal && (
         <div className="modal-overlay animate-fade-in" onClick={() => setShowUploadModal(false)}>
           <div className="modal-content upload-modal-content" onClick={e => e.stopPropagation()}>
-            <button className="modal-close-btn" onClick={() => setShowUploadModal(false)}>&times;</button>
+            <button
+              className="modal-close-btn"
+              onClick={() => setShowUploadModal(false)}
+              aria-label="Close upload popup"
+              title="Close"
+            >
+              &times;
+            </button>
             <div className="modal-inner-scroll custom-scrollbar">
               <UploadFootageNZ onComplete={() => { setShowUploadModal(false); handleRefresh(); }} />
             </div>
@@ -110,55 +128,61 @@ const DashboardNZ = () => {
 
       <style>{`
         .single-page-dashboard {
-          background-color: #111827;
-          color: white;
+          color: #111111;
         }
         .dashboard-main-view {
-          padding: 2rem;
-          max-width: 1600px;
+          padding: 2.5rem 1.5rem 4rem;
+          max-width: 1480px;
           margin: 0 auto;
         }
         .add-footage-btn {
-          background: #dc2626;
-          color: white;
-          border: none;
-          padding: 0.6rem 1.2rem;
-          border-radius: 10px;
+          background: #b90000;
+          color: #ffffff;
+          border: 1px solid #b90000;
+          padding: 0.8rem 1.3rem;
+          border-radius: 999px;
           font-weight: 700;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.65rem;
           margin-right: 1.5rem;
-          transition: all 0.2s;
-          box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          transition: all 0.25s ease;
+          box-shadow: 0 12px 24px rgba(185, 0, 0, 0.16);
         }
         .add-footage-btn:hover {
-          background: #b91c1c;
+          background: #910000;
+          border-color: #910000;
           transform: translateY(-2px);
         }
         .section-heading {
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: #ffffff;
+          font-size: 1.45rem;
+          font-weight: 800;
+          color: #111111;
           border-left: 4px solid #dc2626;
           padding-left: 1rem;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
         }
         .view-grid-wrapper {
-          background: rgba(31, 41, 55, 0.5);
-          border-radius: 1.5rem;
+          background: #ffffff;
+          border-radius: 20px;
           padding: 2rem;
-          border: 1px solid #374151;
+          border: 1px solid #ececec;
+          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05);
         }
         .upload-modal-content {
-          max-width: 900px !important;
+          max-width: 980px !important;
+          width: min(980px, calc(100vw - 32px));
           height: auto !important;
           max-height: 90vh;
         }
         .modal-inner-scroll {
           overflow-y: auto;
           max-height: calc(90vh - 40px);
-          padding: 10px;
+          padding: 14px;
         }
         .section-divider {
           display: flex;
@@ -166,30 +190,39 @@ const DashboardNZ = () => {
           margin-bottom: 2rem;
         }
         .divider-text {
-          font-size: 0.875rem;
+          font-size: 0.82rem;
           font-weight: 800;
           text-transform: uppercase;
-          color: #ffffff;
+          color: #111111;
           letter-spacing: 0.1em;
-          background: #111827;
+          background: transparent;
           padding-right: 1rem;
         }
         .section-divider::after {
           content: "";
           flex: 1;
           height: 1px;
-          background: #374151;
+          background: #d8d8d8;
         }
         .dashboard-section-gap {
-          margin-bottom: 6rem;
-        }
-        .header-gap {
-          margin-bottom: 2.5rem;
-        }
-        .divider-gap {
           margin-bottom: 3rem;
         }
+        .header-gap {
+          margin-bottom: 1.5rem;
+        }
+        .divider-gap {
+          margin-bottom: 1.25rem;
+        }
         @media (max-width: 768px) {
+          .upload-modal-content {
+            width: calc(100vw - 18px);
+            max-height: 92vh;
+            border-radius: 22px !important;
+          }
+          .modal-inner-scroll {
+            max-height: calc(92vh - 32px);
+            padding: 0.85rem;
+          }
           .add-footage-btn span {
             display: none;
           }
@@ -198,7 +231,7 @@ const DashboardNZ = () => {
             margin-right: 0.5rem;
           }
           .dashboard-main-view {
-            padding: 1rem;
+            padding: 1rem 0.85rem 3rem;
           }
           .dashboard-section-gap {
             margin-bottom: 3rem;

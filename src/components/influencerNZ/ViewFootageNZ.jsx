@@ -11,8 +11,7 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;
+    const [visibleCount, setVisibleCount] = useState(10);
     const [selectedVideo, setSelectedVideo] = useState(null);
     const [editingVideo, setEditingVideo] = useState(null);
     const [editForm, setEditForm] = useState({
@@ -79,25 +78,41 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
         }
     };
 
+    const formatActivityType = (activityType) => {
+        if (!activityType) return 'Clip';
+        return activityType.charAt(0).toUpperCase() + activityType.slice(1).toLowerCase();
+    };
+
     useEffect(() => {
         if (!user) return;
         fetchFootage();
+        setVisibleCount(10);
         const intervalId = setInterval(fetchFootage, 15000);
         return () => clearInterval(intervalId);
     }, [user, refreshTrigger, isGlobal, visibilityFilter]);
 
     const filteredVideos = videos.filter((video) =>
         (video.deviceName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.species || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (video.species || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (video.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (video.location || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const totalPages = Math.ceil(filteredVideos.length / itemsPerPage);
-    const paginatedVideos = filteredVideos.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+    useEffect(() => {
+        setVisibleCount(10);
+    }, [searchTerm]);
 
-    if (loading) return <div>Loading NZ footage...</div>;
+    const visibleVideos = filteredVideos.slice(0, visibleCount);
+    const hasMoreVideos = filteredVideos.length > visibleCount;
+
+    if (loading) {
+        return (
+            <div className="loading-container">
+                <div className="spinner"></div>
+                <p className="loading-text">Loading NZ footage...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="view-container animate-fade-in">
@@ -122,11 +137,14 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                 </div>
             ) : (
                 <div className="video-grid">
-                    {paginatedVideos.map((video) => (
+                    {visibleVideos.map((video) => (
                         <div key={video.id} onClick={() => setSelectedVideo(video)} className="video-card">
                             <div className="video-thumbnail">
                                 <video className="thumbnail-img" src={video.videoUrl} />
                                 <div className="play-overlay"><FontAwesomeIcon icon={faPlay} /></div>
+                                <div className="hd-badge">
+                                    {formatActivityType(video.activityType)}
+                                </div>
                             </div>
                             <div className="video-info">
                                 <h3 className="video-title">{video.deviceName}</h3>
@@ -138,6 +156,16 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                                     <div className="meta-item-small location-meta">
                                         <FontAwesomeIcon icon={faLocationDot} />
                                         <span>{video.ausState || (video.location || 'New Zealand')}</span>
+                                    </div>
+                                </div>
+                                <div className="video-meta">
+                                    <div className="meta-item">
+                                        <FontAwesomeIcon icon={faClock} />
+                                        <span>{formatActivityType(video.activityType)}</span>
+                                    </div>
+                                    <div className="meta-item">
+                                        <FontAwesomeIcon icon={faClock} />
+                                        <span>{new Date(video.createdAt || Date.now()).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                                 {(video.userId === user?.uid) && (
@@ -180,7 +208,16 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                 </div>
             )}
 
-            {/* Pagination Logic same as AU... */}
+            {hasMoreVideos && (
+                <div className="load-more-wrap">
+                    <button
+                        className="load-more-btn"
+                        onClick={() => setVisibleCount((prev) => prev + 10)}
+                    >
+                        Show More Videos
+                    </button>
+                </div>
+            )}
 
             {editingVideo && createPortal(
                 <div className="modal-overlay" onClick={() => setEditingVideo(null)} style={{ zIndex: 999999 }}>
@@ -311,7 +348,7 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                                     <FontAwesomeIcon icon={faClock} className="modal-meta-icon" />
                                     <div className="modal-meta-content">
                                         <span className="modal-meta-label">Activity</span>
-                                        <span className="modal-meta-value" style={{ textTransform: 'capitalize' }}>{selectedVideo.activityType || 'Clip'}</span>
+                                        <span className="modal-meta-value">{formatActivityType(selectedVideo.activityType)}</span>
                                     </div>
                                 </div>
                             </div>
