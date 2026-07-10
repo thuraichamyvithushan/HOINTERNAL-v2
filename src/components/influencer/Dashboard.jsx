@@ -60,7 +60,7 @@ const Dashboard = () => {
 
       {/* Main Grid Section */}
       <main className="dashboard-main-view">
-        <div className="full-width-section dashboard-section-gap">
+        <div className="full-width-section dashboard-section-gap footage-section-shell">
           <div className="section-divider divider-gap">
             <span className="divider-text">Private Storage</span>
           </div>
@@ -74,7 +74,7 @@ const Dashboard = () => {
 
         {/* Admin Section: View Users Private Videos */}
         {user?.role === 'admin' && (
-          <div className="full-width-section dashboard-section-gap">
+          <div className="full-width-section dashboard-section-gap footage-section-shell">
             <div className="section-divider divider-gap">
               <span className="divider-text">Admin Control Panel</span>
             </div>
@@ -86,7 +86,7 @@ const Dashboard = () => {
         )}
 
         {/* Section 2: Global Footage Feed */}
-        <div className="full-width-section dashboard-section-gap">
+        <div className="full-width-section dashboard-section-gap footage-section-shell">
           <div className="section-divider divider-gap">
             <span className="divider-text">Collective Network Feed</span>
           </div>
@@ -157,8 +157,17 @@ const Dashboard = () => {
           border-color: #910000;
           transform: translateY(-2px);
         }
-        .header-user-info {
-           margin-right: 1rem;
+        .footage-section-shell {
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.84) 100%),
+            url('/images/background.png') !important;
+          background-position: center !important;
+          background-size: cover !important;
+          background-repeat: no-repeat !important;
+          border: 1px solid #ececec;
+          border-radius: 28px;
+          padding: 1.75rem;
+          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.06);
         }
         .section-heading {
           font-size: 1.45rem;
@@ -219,24 +228,6 @@ const Dashboard = () => {
         .divider-gap {
           margin-bottom: 1.25rem;
         }
-        .top-logout-btn {
-          background: #f4f4f4;
-          color: #555555;
-          border: none;
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-left: 1rem;
-        }
-        .top-logout-btn:hover {
-          background: #b90000;
-          color: white;
-        }
         @media (max-width: 768px) {
           .upload-modal-content {
             width: calc(100vw - 18px);
@@ -259,6 +250,10 @@ const Dashboard = () => {
           }
           .dashboard-section-gap {
             margin-bottom: 3rem;
+          }
+          .footage-section-shell {
+            padding: 1rem;
+            border-radius: 22px;
           }
           .view-grid-wrapper {
             padding: 1.25rem;
