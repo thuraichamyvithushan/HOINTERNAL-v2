@@ -60,7 +60,7 @@ const DashboardNZ = () => {
 
       {/* Main Grid Section */}
       <main className="dashboard-main-view">
-        <div className="full-width-section dashboard-section-gap">
+        <div className="full-width-section dashboard-section-gap footage-section-shell">
           <div className="section-divider divider-gap">
             <span className="divider-text">Private Storage (NZ)</span>
           </div>
@@ -74,7 +74,7 @@ const DashboardNZ = () => {
 
         {/* Admin Section: View Users Private Videos */}
         {user?.role === 'admin' && (
-          <div className="full-width-section dashboard-section-gap">
+          <div className="full-width-section dashboard-section-gap footage-section-shell">
             <div className="section-divider divider-gap">
               <span className="divider-text">Admin Control Panel (NZ)</span>
             </div>
@@ -86,7 +86,7 @@ const DashboardNZ = () => {
         )}
 
         {/* Section 2: Global Footage Feed */}
-        <div className="full-width-section dashboard-section-gap">
+        <div className="full-width-section dashboard-section-gap footage-section-shell">
           <div className="section-divider divider-gap">
             <span className="divider-text">NZ Collective Network Feed</span>
           </div>
@@ -157,6 +157,18 @@ const DashboardNZ = () => {
           border-color: #910000;
           transform: translateY(-2px);
         }
+        .footage-section-shell {
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.84) 100%),
+            url('/images/background.png') !important;
+          background-position: center !important;
+          background-size: cover !important;
+          background-repeat: no-repeat !important;
+          border: 1px solid #ececec;
+          border-radius: 28px;
+          padding: 1.75rem;
+          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.06);
+        }
         .section-heading {
           font-size: 1.45rem;
           font-weight: 800;
@@ -167,7 +179,10 @@ const DashboardNZ = () => {
           letter-spacing: 0.04em;
         }
         .view-grid-wrapper {
-          background: #ffffff;
+          background: url('/images/background.png') !important;
+          background-position: center !important;
+          background-size: cover !important;
+          background-repeat: no-repeat !important;
           border-radius: 20px;
           padding: 2rem;
           border: 1px solid #ececec;
@@ -235,6 +250,10 @@ const DashboardNZ = () => {
           }
           .dashboard-section-gap {
             margin-bottom: 3rem;
+          }
+          .footage-section-shell {
+            padding: 1rem;
+            border-radius: 22px;
           }
           .view-grid-wrapper {
             padding: 1.25rem;

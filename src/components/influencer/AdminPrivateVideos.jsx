@@ -48,7 +48,7 @@ const AdminPrivateVideos = () => {
 
     if (selectedUserId) {
         return (
-            <div className="admin-user-videos-view">
+            <div className="admin-user-videos-view footage-section-shell">
                 <div className="admin-user-videos-header">
                     <button
                         onClick={() => setSelectedUserId(null)}

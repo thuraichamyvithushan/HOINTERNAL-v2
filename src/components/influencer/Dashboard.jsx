@@ -170,7 +170,10 @@ const Dashboard = () => {
           letter-spacing: 0.04em;
         }
         .view-grid-wrapper {
-          background: #ffffff;
+          background: url('/images/background.png') !important;
+          background-position: center !important;
+          background-size: cover !important;
+          background-repeat: no-repeat !important;
           border-radius: 20px;
           padding: 2rem;
           border: 1px solid #ececec;

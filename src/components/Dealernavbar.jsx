@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
 import { firestore } from "../firebase";
 import "./navbar.css";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import UserDetailsModal from "./UserDetailsModal";
 import { AuthContext } from "../context/AuthContext";
 import { useContext } from "react";
@@ -26,11 +26,17 @@ import {
 
 const DealerNavbar = () => {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
   const isRepresentative = user?.role === "representative";
   const isNZRepresentative =
     user?.country?.toLowerCase() === "new zealand" || user?.country?.toLowerCase() === "nz";
+  const representativePath = isNZRepresentative ? "/representative-page-nz" : "/representative-page";
   const influencerPath = isNZRepresentative ? "/influencer-page-nz" : "/influencer-page";
-  const influencerLabel = isNZRepresentative ? "NZ Influencer Page" : "AU Influencer Page";
+  const isOnInfluencerPage = location.pathname === influencerPath;
+  const representativeTogglePath = isOnInfluencerPage ? representativePath : influencerPath;
+  const representativeToggleLabel = isOnInfluencerPage
+    ? (isNZRepresentative ? "NZ Rep Portal" : "AU Rep Portal")
+    : (isNZRepresentative ? "NZ Influencer Portal" : "AU Influencer Portal");
   const searchBarStyle = {
     position: "absolute",
     top: "50%",
@@ -111,14 +117,14 @@ const DealerNavbar = () => {
             {isRepresentative && (
               <li style={{ listStyle: "none", marginLeft: "25px" }}>
                 <Link
-                  to={influencerPath}
+                  to={representativeTogglePath}
                   className="service-panel-btn"
                   style={{
                     background: "linear-gradient(135deg, #dc2626, #991b1b)",
                     boxShadow: "0 10px 25px rgba(220, 38, 38, 0.28)"
                   }}
                 >
-                  {influencerLabel}
+                  {representativeToggleLabel}
                 </Link>
               </li>
             )}
@@ -200,9 +206,9 @@ const DealerNavbar = () => {
               </Link>
             )}
             {isRepresentative && (
-              <Link to={influencerPath} className="menu_links sidebar-admin-link" onClick={closeSidebar}>
+              <Link to={representativeTogglePath} className="menu_links sidebar-admin-link" onClick={closeSidebar}>
                 <FontAwesomeIcon icon={faCrosshairs} />
-                <span style={{ marginLeft: "10px" }}>{influencerLabel}</span>
+                <span style={{ marginLeft: "10px" }}>{representativeToggleLabel}</span>
               </Link>
             )}
             <hr style={{ margin: 0, padding: "5px", height: "10px", color: "#c21b29" }}></hr>

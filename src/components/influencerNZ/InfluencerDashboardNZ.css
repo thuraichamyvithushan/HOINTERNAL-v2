@@ -461,7 +461,7 @@
 
 @media (min-width: 1024px) {
     .video-grid {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
 
@@ -2370,7 +2370,6 @@
 .detail-pill,
 .leaderboard-user-card,
 .admin-user-card,
-.view-grid-wrapper,
 .modal-meta-grid,
 .influencer-stats,
 .user-mini-card,
