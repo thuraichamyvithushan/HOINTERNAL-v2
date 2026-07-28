@@ -5,7 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCloudUploadAlt, faFileUpload, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
-import { getUploadErrorMessage, uploadFootageFiles } from '../../utils/uploadFootage';
+import { detectFootageKind, getUploadErrorMessage, uploadFootageFiles } from '../../utils/uploadFootage';
 import './InfluencerDashboardNZ.css';
 
 const UploadFootageNZ = (props) => {
@@ -26,6 +26,22 @@ const UploadFootageNZ = (props) => {
     const [deviceOptions, setDeviceOptions] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [showDeviceDropdown, setShowDeviceDropdown] = useState(false);
+
+    const getSelectedMediaSummary = () => {
+        const imageCount = files.filter((file) => detectFootageKind(file) === 'image').length;
+        const videoCount = files.length - imageCount;
+        const parts = [];
+
+        if (imageCount > 0) {
+            parts.push(`${imageCount} image${imageCount === 1 ? '' : 's'}`);
+        }
+
+        if (videoCount > 0) {
+            parts.push(`${videoCount} video${videoCount === 1 ? '' : 's'}`);
+        }
+
+        return parts.join(' and ') || '0 files';
+    };
 
     const uploadMessageStyles = uploadMessage?.type === 'success'
         ? {
@@ -95,7 +111,7 @@ const UploadFootageNZ = (props) => {
     const handleUpload = async (e) => {
         e.preventDefault();
         if (files.length === 0 || !deviceName || !ausState) {
-            toast.error('Please select at least one video, choose a device name, and select a region.');
+            toast.error('Please select at least one image or video, choose a device name, and select a region.');
             return;
         }
 
@@ -128,7 +144,7 @@ const UploadFootageNZ = (props) => {
             });
             setUploadMessage({
                 type: 'success',
-                text: `Successfully uploaded ${files.length} NZ video(s).`
+                text: `Successfully uploaded ${files.length} NZ media file(s).`
             });
             setFiles([]);
             setDeviceName('');
@@ -361,7 +377,7 @@ const UploadFootageNZ = (props) => {
                 </div>
 
                 <div className="upload-column">
-                    <label className="label">Video Files</label>
+                    <label className="label">Image / Video Files</label>
                     <div className="form-group full-width" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
                         <label className="input-label" style={{ display: 'block', marginBottom: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.05em' }}>
                             Visibility Control
@@ -390,10 +406,10 @@ const UploadFootageNZ = (props) => {
                         {files.length === 0 ? (
                             <div className="dropzone-empty">
                                 <FontAwesomeIcon icon={faFileUpload} size="3x" className="icon-faint" />
-                                <p className="text-gray-400 upload-helper-text">Select videos for NZ upload</p>
+                                <p className="text-gray-400 upload-helper-text">Select images or videos for NZ upload</p>
                                 <input
                                     type="file"
-                                    accept="video/*"
+                                    accept="video/*,image/*"
                                     multiple
                                     onChange={handleFileChange}
                                     className="hidden-file-input"
@@ -405,7 +421,10 @@ const UploadFootageNZ = (props) => {
                         ) : (
                             <div className="dropzone-ready">
                                 <FontAwesomeIcon icon={faCheckCircle} size="3x" className="icon-success" />
-                                <p className="file-name">{files.length} NZ video(s) selected</p>
+                                <p className="file-name">{getSelectedMediaSummary()} selected</p>
+                                <div className="file-list-preview" style={{ fontSize: '0.8rem', maxHeight: '80px', overflowY: 'auto', marginBottom: '1rem' }}>
+                                    {files.map((file, index) => <div key={index}>{file.name}</div>)}
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -423,7 +442,7 @@ const UploadFootageNZ = (props) => {
                         {uploading && (
                             <div style={{ width: '100%', marginTop: '1.25rem' }}>
                                 <p className="upload-progress-status" style={{ margin: '0 0 0.35rem 0', fontSize: '0.95rem', fontWeight: 700, textAlign: 'center' }}>
-                                    Uploaded {uploadedCount} of {files.length} video(s)
+                                    Uploaded {uploadedCount} of {files.length} media file(s)
                                 </p>
                                 <p className="upload-progress-percent" style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: 700, textAlign: 'center' }}>
                                     {progress}%

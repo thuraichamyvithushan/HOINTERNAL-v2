@@ -3,11 +3,47 @@ import firebase, { firestore, storage } from '../firebase';
 const buildUploaderName = (user) =>
   user?.displayName || user?.email?.split('@')[0] || 'Influencer';
 
-const uploadFileToStorage = ({ file, storagePath, onProgressDelta }) =>
+const IMAGE_FILE_PATTERN = /\.(avif|bmp|gif|heic|heif|jpe?g|png|svg|webp)$/i;
+const VIDEO_FILE_PATTERN = /\.(3gp|avi|m4v|mkv|mov|mp4|mpeg|mpg|webm)$/i;
+
+export const detectFootageKind = (fileLike = {}) => {
+  const mediaType = fileLike.mediaType || fileLike.contentType || fileLike.type || '';
+
+  if (mediaType.startsWith('image/')) {
+    return 'image';
+  }
+
+  if (mediaType.startsWith('video/')) {
+    return 'video';
+  }
+
+  const fileName = (
+    fileLike.originalFileName ||
+    fileLike.name ||
+    fileLike.mediaUrl ||
+    fileLike.videoUrl ||
+    ''
+  ).toLowerCase();
+
+  if (IMAGE_FILE_PATTERN.test(fileName)) {
+    return 'image';
+  }
+
+  if (VIDEO_FILE_PATTERN.test(fileName)) {
+    return 'video';
+  }
+
+  return 'video';
+};
+
+const getFallbackContentType = (fileKind) =>
+  fileKind === 'image' ? 'image/jpeg' : 'video/mp4';
+
+const uploadFileToStorage = ({ file, storagePath, fileKind, onProgressDelta }) =>
   new Promise((resolve, reject) => {
     const storageRef = storage.ref(storagePath);
     const uploadTask = storageRef.put(file, {
-      contentType: file.type || 'video/mp4'
+      contentType: file.type || getFallbackContentType(fileKind)
     });
 
     let previousBytesTransferred = 0;
@@ -22,8 +58,8 @@ const uploadFileToStorage = ({ file, storagePath, onProgressDelta }) =>
       reject,
       async () => {
         try {
-          const videoUrl = await uploadTask.snapshot.ref.getDownloadURL();
-          resolve({ videoUrl, storagePath });
+          const mediaUrl = await uploadTask.snapshot.ref.getDownloadURL();
+          resolve({ mediaUrl, storagePath, mediaType: file.type || '', fileKind });
         } catch (error) {
           reject(error);
         }
@@ -47,6 +83,10 @@ export const uploadFootageFiles = async ({
 }) => {
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);
   let uploadedBytes = 0;
+  const uploadBatchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const uploadBatchImageCount = files.filter((file) => detectFootageKind(file) === 'image').length;
+  const uploadBatchVideoCount = files.length - uploadBatchImageCount;
+  const uploadBatchTotal = files.length;
 
   const updateProgress = (delta) => {
     uploadedBytes += delta;
@@ -58,13 +98,15 @@ export const uploadFootageFiles = async ({
 
   for (const file of files) {
     const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const storagePath = `videos/${user.uid}/${fileName}`;
+    const fileKind = detectFootageKind(file);
+    const storagePath = `${fileKind === 'image' ? 'images' : 'videos'}/${user.uid}/${fileName}`;
     let uploadedFile = null;
 
     try {
       uploadedFile = await uploadFileToStorage({
         file,
         storagePath,
+        fileKind,
         onProgressDelta: updateProgress
       });
 
@@ -74,11 +116,18 @@ export const uploadFootageFiles = async ({
         userName: buildUploaderName(user),
         userPhoto: user.photoURL || '',
         originalFileName: file.name,
-        videoUrl: uploadedFile.videoUrl,
+        videoUrl: uploadedFile.mediaUrl,
+        mediaUrl: uploadedFile.mediaUrl,
+        mediaType: uploadedFile.mediaType || file.type || '',
+        fileKind: uploadedFile.fileKind || fileKind,
+        uploadBatchId,
+        uploadBatchTotal,
+        uploadBatchImageCount,
+        uploadBatchVideoCount,
         storagePath: uploadedFile.storagePath
       });
 
-      onFileComplete(file);
+      onFileComplete(file, { fileKind });
     } catch (error) {
       if (uploadedFile?.storagePath) {
         await storage.ref(uploadedFile.storagePath).delete().catch(() => {});

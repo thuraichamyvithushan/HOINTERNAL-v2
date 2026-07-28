@@ -2,8 +2,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faPlay, faClock, faMicrochip, faVideoSlash, faLocationDot, faPaw, faTrash, faEdit, faXmark, faCheck, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faPlay, faClock, faMicrochip, faVideoSlash, faLocationDot, faPaw, faTrash, faEdit, faXmark, faCheck, faUser, faImage, faImages, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { API_URL } from '../../config';
+import { detectFootageKind } from '../../utils/uploadFootage';
 import './InfluencerDashboardNZ.css';
 
 const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigger = 0, overrideUserId = null }) => {
@@ -11,8 +12,9 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [visibleCount, setVisibleCount] = useState(10);
+    const [visibleCount, setVisibleCount] = useState(8);
     const [selectedVideo, setSelectedVideo] = useState(null);
+    const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
     const [editingVideo, setEditingVideo] = useState(null);
     const [editForm, setEditForm] = useState({
         deviceName: '',
@@ -83,23 +85,91 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
         return activityType.charAt(0).toUpperCase() + activityType.slice(1).toLowerCase();
     };
 
+    const getMediaKind = (video) => detectFootageKind(video);
+    const getMediaUrl = (video) => video?.mediaUrl || video?.videoUrl || '';
+    const getMediaLabel = (item) => {
+        if (item?.isFolder) {
+            return 'Images';
+        }
+
+        return getMediaKind(item) === 'image' ? 'Image' : 'Video';
+    };
+    const isMultiImageFolderCandidate = (video) =>
+        getMediaKind(video) === 'image' &&
+        !!video?.uploadBatchId &&
+        Number(video?.uploadBatchImageCount || 0) > 1;
+
+    const matchesSearch = (video) =>
+        (video.deviceName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (video.species || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (video.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (video.location || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const buildDisplayItems = (items) => {
+        const groupedBatchIds = new Set();
+        const displayItems = [];
+
+        items.forEach((item) => {
+            if (!isMultiImageFolderCandidate(item)) {
+                if (matchesSearch(item)) {
+                    displayItems.push(item);
+                }
+                return;
+            }
+
+            if (groupedBatchIds.has(item.uploadBatchId)) {
+                return;
+            }
+
+            groupedBatchIds.add(item.uploadBatchId);
+
+            const folderItems = items
+                .filter((candidate) =>
+                    candidate.uploadBatchId === item.uploadBatchId &&
+                    getMediaKind(candidate) === 'image'
+                )
+                .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+            if (folderItems.length <= 1) {
+                if (matchesSearch(item)) {
+                    displayItems.push(item);
+                }
+                return;
+            }
+
+            if (!folderItems.some(matchesSearch)) {
+                return;
+            }
+
+            displayItems.push({
+                id: `folder-${item.uploadBatchId}`,
+                isFolder: true,
+                folderName: item.deviceName || 'Image Folder',
+                coverImage: folderItems[0],
+                items: folderItems
+            });
+        });
+
+        return displayItems;
+    };
+
+    const openViewer = (item) => {
+        setSelectedVideo(item);
+        setCurrentGalleryIndex(0);
+    };
+
     useEffect(() => {
         if (!user) return;
         fetchFootage();
-        setVisibleCount(10);
+        setVisibleCount(8);
         const intervalId = setInterval(fetchFootage, 15000);
         return () => clearInterval(intervalId);
     }, [user, refreshTrigger, isGlobal, visibilityFilter]);
 
-    const filteredVideos = videos.filter((video) =>
-        (video.deviceName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.species || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.location || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredVideos = buildDisplayItems(videos);
 
     useEffect(() => {
-        setVisibleCount(10);
+        setVisibleCount(8);
     }, [searchTerm]);
 
     const visibleVideos = filteredVideos.slice(0, visibleCount);
@@ -137,51 +207,90 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                 </div>
             ) : (
                 <div className="video-grid">
-                    {visibleVideos.map((video) => (
-                        <div key={video.id} onClick={() => setSelectedVideo(video)} className="video-card">
+                    {visibleVideos.map((video) => {
+                        const cardItem = video.isFolder ? video.coverImage : video;
+                        const cardMediaKind = video.isFolder ? 'folder' : getMediaKind(cardItem);
+
+                        return (
+                        <div key={video.id} onClick={() => openViewer(video)} className="video-card">
                             <div className="video-thumbnail">
-                                <video className="thumbnail-img" src={video.videoUrl} />
-                                <div className="play-overlay"><FontAwesomeIcon icon={faPlay} /></div>
+                                {cardMediaKind === 'folder' || cardMediaKind === 'image' ? (
+                                    <img
+                                        className="thumbnail-img"
+                                        src={getMediaUrl(cardItem)}
+                                        alt={cardItem.deviceName || cardItem.originalFileName || 'Uploaded image'}
+                                        loading="lazy"
+                                    />
+                                ) : (
+                                    <video
+                                        className="thumbnail-img"
+                                        src={getMediaUrl(cardItem)}
+                                        muted
+                                        playsInline
+                                    />
+                                )}
+                                <div className="play-overlay">
+                                    <FontAwesomeIcon icon={cardMediaKind === 'folder' ? faImages : (cardMediaKind === 'image' ? faImage : faPlay)} />
+                                </div>
                                 <div className="hd-badge">
-                                    {formatActivityType(video.activityType)}
+                                    {video.isFolder ? `${video.items.length} Images` : formatActivityType(cardItem.activityType)}
+                                </div>
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: '12px',
+                                        right: '12px',
+                                        zIndex: 4,
+                                        padding: '0.35rem 0.7rem',
+                                        borderRadius: '999px',
+                                        background: 'rgba(17, 17, 17, 0.82)',
+                                        color: '#ffffff',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.05em',
+                                        textTransform: 'uppercase',
+                                        boxShadow: '0 10px 20px rgba(0, 0, 0, 0.16)'
+                                    }}
+                                >
+                                    {getMediaLabel(video.isFolder ? video : cardItem)}
                                 </div>
                             </div>
                             <div className="video-info">
-                                <h3 className="video-title">{video.deviceName}</h3>
+                                <h3 className="video-title">{video.isFolder ? (video.folderName || 'Image Folder') : cardItem.deviceName}</h3>
                                 <div className="meta-stack">
                                     <div className="meta-item-small influencer-meta">
                                         <FontAwesomeIcon icon={faUser} />
-                                        <span>{video.userName || 'Influencer'}</span>
+                                        <span>{cardItem.userName || 'Influencer'}</span>
                                     </div>
                                     <div className="meta-item-small location-meta">
                                         <FontAwesomeIcon icon={faLocationDot} />
-                                        <span>{video.ausState || (video.location || 'New Zealand')}</span>
+                                        <span>{cardItem.ausState || (cardItem.location || 'New Zealand')}</span>
                                     </div>
                                 </div>
                                 <div className="video-meta">
                                     <div className="meta-item">
                                         <FontAwesomeIcon icon={faClock} />
-                                        <span>{formatActivityType(video.activityType)}</span>
+                                        <span>{video.isFolder ? 'Image Folder' : formatActivityType(cardItem.activityType)}</span>
                                     </div>
                                     <div className="meta-item">
                                         <FontAwesomeIcon icon={faClock} />
-                                        <span>{new Date(video.createdAt || Date.now()).toLocaleDateString()}</span>
+                                        <span>{new Date(cardItem.createdAt || Date.now()).toLocaleDateString()}</span>
                                     </div>
                                 </div>
-                                {(video.userId === user?.uid) && (
+                                {!video.isFolder && (cardItem.userId === user?.uid) && (
                                     <div className="card-actions-row">
                                         <button
                                             className="action-icon-btn edit-btn"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setEditingVideo(video);
+                                                setEditingVideo(cardItem);
                                                 setEditForm({
-                                                    deviceName: video.deviceName || '',
-                                                    species: video.species || '',
-                                                    activityType: video.activityType || 'hunting',
-                                                    location: video.location || '',
-                                                    description: video.description || '',
-                                                    ausState: video.ausState || ''
+                                                    deviceName: cardItem.deviceName || '',
+                                                    species: cardItem.species || '',
+                                                    activityType: cardItem.activityType || 'hunting',
+                                                    location: cardItem.location || '',
+                                                    description: cardItem.description || '',
+                                                    ausState: cardItem.ausState || ''
                                                 });
                                             }}
                                             title="Edit"
@@ -193,7 +302,7 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (window.confirm('Are you sure you want to delete this footage?')) {
-                                                    handleDelete(video.id);
+                                                    handleDelete(cardItem.id);
                                                 }
                                             }}
                                             title="Delete"
@@ -204,7 +313,7 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                                 )}
                             </div>
                         </div>
-                    ))}
+                    )})}
                 </div>
             )}
 
@@ -212,9 +321,9 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                 <div className="load-more-wrap">
                     <button
                         className="load-more-btn"
-                        onClick={() => setVisibleCount((prev) => prev + 10)}
+                        onClick={() => setVisibleCount((prev) => prev + 8)}
                     >
-                        Show More Videos
+                        Show More Footage
                     </button>
                 </div>
             )}
@@ -315,51 +424,159 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                 <div className="modal-overlay" onClick={() => setSelectedVideo(null)}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-video-container">
-                            <video src={selectedVideo.videoUrl} controls autoPlay className="modal-video-player" />
+                            {selectedVideo.isFolder && selectedVideo.items.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCurrentGalleryIndex((prev) => (prev === 0 ? selectedVideo.items.length - 1 : prev - 1));
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        left: '16px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        zIndex: 5,
+                                        width: '44px',
+                                        height: '44px',
+                                        border: 'none',
+                                        borderRadius: '999px',
+                                        background: 'rgba(17, 17, 17, 0.72)',
+                                        color: '#ffffff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer'
+                                    }}
+                                    aria-label="Previous image"
+                                >
+                                    <FontAwesomeIcon icon={faChevronLeft} />
+                                </button>
+                            )}
+                            {selectedVideo.isFolder ? (
+                                <img
+                                    src={getMediaUrl(selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)}
+                                    alt={(selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.deviceName || 'Uploaded image'}
+                                    className="modal-video-player"
+                                />
+                            ) : getMediaKind(selectedVideo) === 'image' ? (
+                                <img
+                                    src={getMediaUrl(selectedVideo)}
+                                    alt={selectedVideo.deviceName || selectedVideo.originalFileName || 'Uploaded image'}
+                                    className="modal-video-player"
+                                />
+                            ) : (
+                                <video src={getMediaUrl(selectedVideo)} controls autoPlay className="modal-video-player" />
+                            )}
+                            {selectedVideo.isFolder && selectedVideo.items.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCurrentGalleryIndex((prev) => (prev === selectedVideo.items.length - 1 ? 0 : prev + 1));
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '16px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        zIndex: 5,
+                                        width: '44px',
+                                        height: '44px',
+                                        border: 'none',
+                                        borderRadius: '999px',
+                                        background: 'rgba(17, 17, 17, 0.72)',
+                                        color: '#ffffff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer'
+                                    }}
+                                    aria-label="Next image"
+                                >
+                                    <FontAwesomeIcon icon={faChevronRight} />
+                                </button>
+                            )}
                         </div>
                         <div className="modal-details">
                             <div className="modal-details-title-row">
-                                <h2 className="modal-title">{selectedVideo.deviceName || 'No Title'}</h2>
+                                <h2 className="modal-title">
+                                    {selectedVideo.isFolder
+                                        ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.deviceName || 'Image Folder'
+                                        : (selectedVideo.deviceName || 'No Title')}
+                                </h2>
                             </div>
+
+                            {selectedVideo.isFolder && selectedVideo.items.length > 1 && (
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#374151' }}>
+                                        Image {currentGalleryIndex + 1} of {selectedVideo.items.length}
+                                    </span>
+                                </div>
+                            )}
 
                             <div className="modal-meta-grid">
                                 <div className="modal-meta-item">
                                     <FontAwesomeIcon icon={faUser} className="modal-meta-icon" />
                                     <div className="modal-meta-content">
                                         <span className="modal-meta-label">Influencer</span>
-                                        <span className="modal-meta-value">{selectedVideo.userName || 'Huntsman Influencer'}</span>
+                                        <span className="modal-meta-value">
+                                            {selectedVideo.isFolder
+                                                ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.userName || 'Huntsman Influencer'
+                                                : (selectedVideo.userName || 'Huntsman Influencer')}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="modal-meta-item">
                                     <FontAwesomeIcon icon={faLocationDot} className="modal-meta-icon" />
                                     <div className="modal-meta-content">
                                         <span className="modal-meta-label">Region</span>
-                                        <span className="modal-meta-value">{selectedVideo.ausState || (selectedVideo.location || 'New Zealand')}</span>
+                                        <span className="modal-meta-value">
+                                            {selectedVideo.isFolder
+                                                ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.ausState || ((selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.location || 'New Zealand')
+                                                : (selectedVideo.ausState || (selectedVideo.location || 'New Zealand'))}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="modal-meta-item">
                                     <FontAwesomeIcon icon={faPaw} className="modal-meta-icon" />
                                     <div className="modal-meta-content">
                                         <span className="modal-meta-label">Species</span>
-                                        <span className="modal-meta-value">{selectedVideo.species || 'Various'}</span>
+                                        <span className="modal-meta-value">
+                                            {selectedVideo.isFolder
+                                                ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.species || 'Various'
+                                                : (selectedVideo.species || 'Various')}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="modal-meta-item">
                                     <FontAwesomeIcon icon={faClock} className="modal-meta-icon" />
                                     <div className="modal-meta-content">
                                         <span className="modal-meta-label">Activity</span>
-                                        <span className="modal-meta-value">{formatActivityType(selectedVideo.activityType)}</span>
+                                        <span className="modal-meta-value">
+                                            {selectedVideo.isFolder
+                                                ? `${selectedVideo.items.length} image folder`
+                                                : formatActivityType(selectedVideo.activityType)}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="modal-description-section">
                                 <h4 className="modal-section-title">Notes & Context</h4>
-                                <p className="modal-description">{selectedVideo.description || 'No additional details provided for this clip.'}</p>
+                                <p className="modal-description">
+                                    {selectedVideo.isFolder
+                                        ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.description || 'No additional details provided for this image.'
+                                        : (selectedVideo.description || 'No additional details provided for this clip.')}
+                                </p>
                             </div>
 
                             <div className="modal-footer-meta">
-                                Uploaded on {new Date(selectedVideo.createdAt || Date.now()).toLocaleString()}
+                                Uploaded on {new Date(
+                                    selectedVideo.isFolder
+                                        ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.createdAt || Date.now()
+                                        : (selectedVideo.createdAt || Date.now())
+                                ).toLocaleString()}
                             </div>
                         </div>
                     </div>

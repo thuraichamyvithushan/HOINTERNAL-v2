@@ -5,7 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCloudUploadAlt, faFileUpload, faCheckCircle, faSpinner } from '@fortawesome/free-solid-svg-icons';
-import { getUploadErrorMessage, uploadFootageFiles } from '../../utils/uploadFootage';
+import { detectFootageKind, getUploadErrorMessage, uploadFootageFiles } from '../../utils/uploadFootage';
 import './InfluencerDashboard.css';
 
 const UploadFootage = (props) => {
@@ -26,6 +26,22 @@ const UploadFootage = (props) => {
     const [deviceOptions, setDeviceOptions] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [showDeviceDropdown, setShowDeviceDropdown] = useState(false);
+
+    const getSelectedMediaSummary = () => {
+        const imageCount = files.filter((file) => detectFootageKind(file) === 'image').length;
+        const videoCount = files.length - imageCount;
+        const parts = [];
+
+        if (imageCount > 0) {
+            parts.push(`${imageCount} image${imageCount === 1 ? '' : 's'}`);
+        }
+
+        if (videoCount > 0) {
+            parts.push(`${videoCount} video${videoCount === 1 ? '' : 's'}`);
+        }
+
+        return parts.join(' and ') || '0 files';
+    };
 
     const uploadMessageStyles = uploadMessage?.type === 'success'
         ? {
@@ -76,7 +92,7 @@ const UploadFootage = (props) => {
     const handleUpload = async (e) => {
         e.preventDefault();
         if (files.length === 0 || !deviceName || !ausState) {
-            toast.error('Please select at least one video, choose a device name, and select a state.');
+            toast.error('Please select at least one image or video, choose a device name, and select a state.');
             return;
         }
 
@@ -109,7 +125,7 @@ const UploadFootage = (props) => {
             });
             setUploadMessage({
                 type: 'success',
-                text: `Successfully uploaded ${files.length} video(s).`
+                text: `Successfully uploaded ${files.length} media file(s).`
             });
             setFiles([]);
             setDeviceName('');
@@ -353,7 +369,7 @@ const UploadFootage = (props) => {
                 </div>
 
                 <div className="upload-column">
-                    <label className="label">Video Files (Multiple Selected Allowed)</label>
+                    <label className="label">Image / Video Files (Multiple Selected Allowed)</label>
                     <div className="form-group full-width" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
                         <label className="input-label" style={{ display: 'block', marginBottom: '0.75rem', color: '#6b7280', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.05em' }}>
                             Visibility Control
@@ -382,10 +398,10 @@ const UploadFootage = (props) => {
                         {files.length === 0 ? (
                             <div className="dropzone-empty">
                                 <FontAwesomeIcon icon={faFileUpload} size="3x" className="icon-faint" />
-                                <p className="text-gray-400 upload-helper-text">Select one or more videos for this device</p>
+                                <p className="text-gray-400 upload-helper-text">Select one or more images or videos for this device</p>
                                 <input
                                     type="file"
-                                    accept="video/*"
+                                    accept="video/*,image/*"
                                     multiple
                                     onChange={handleFileChange}
                                     className="hidden-file-input"
@@ -402,7 +418,7 @@ const UploadFootage = (props) => {
                         ) : (
                             <div className="dropzone-ready">
                                 <FontAwesomeIcon icon={faCheckCircle} size="3x" className="icon-success" />
-                                <p className="file-name">{files.length} video(s) selected</p>
+                                <p className="file-name">{getSelectedMediaSummary()} selected</p>
                                 <div className="file-list-preview" style={{ fontSize: '0.8rem', maxHeight: '80px', overflowY: 'auto', marginBottom: '1rem' }}>
                                     {files.map((f, i) => <div key={i}>{f.name}</div>)}
                                 </div>
@@ -423,7 +439,7 @@ const UploadFootage = (props) => {
                         {uploading && (
                             <div style={{ width: '100%', marginTop: '1.25rem' }}>
                                 <p className="upload-progress-status" style={{ margin: '0 0 0.35rem 0', fontSize: '0.95rem', fontWeight: 700, textAlign: 'center' }}>
-                                    Uploaded {uploadedCount} of {files.length} video(s)
+                                    Uploaded {uploadedCount} of {files.length} media file(s)
                                 </p>
                                 <p className="upload-progress-percent" style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: 700, textAlign: 'center' }}>
                                     {progress}%
