@@ -346,16 +346,16 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                                 <div
                                     style={{
                                         position: 'absolute',
-                                        top: '12px',
-                                        right: '12px',
+                                        top: 'clamp(8px, 2.4vw, 12px)',
+                                        right: 'clamp(8px, 2.4vw, 12px)',
                                         zIndex: 4,
-                                        padding: '0.35rem 0.7rem',
+                                        padding: 'clamp(0.2rem, 1vw, 0.35rem) clamp(0.45rem, 1.8vw, 0.7rem)',
                                         borderRadius: '999px',
                                         background: 'rgba(17, 17, 17, 0.82)',
                                         color: '#ffffff',
-                                        fontSize: '0.72rem',
+                                        fontSize: 'clamp(0.58rem, 1.8vw, 0.72rem)',
                                         fontWeight: 800,
-                                        letterSpacing: '0.05em',
+                                        letterSpacing: 'clamp(0.03em, 0.12vw, 0.05em)',
                                         textTransform: 'uppercase',
                                         boxShadow: '0 10px 20px rgba(0, 0, 0, 0.16)'
                                     }}
@@ -458,12 +458,36 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                 <div className="modal-overlay" onClick={() => setEditingVideo(null)} style={{ zIndex: 999999 }}>
                     <div className="modal-content modern-edit-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header accent-header">
-                            <div className="header-icon-circle">
+                            <div
+                                className="header-icon-circle"
+                                style={{
+                                    width: 'clamp(2rem, 6vw, 2.75rem)',
+                                    height: 'clamp(2rem, 6vw, 2.75rem)',
+                                    minWidth: 'clamp(2rem, 6vw, 2.75rem)',
+                                    fontSize: 'clamp(0.78rem, 2.4vw, 1rem)'
+                                }}
+                            >
                                 <FontAwesomeIcon icon={faEdit} />
                             </div>
                             <div className="header-text">
-                                <h3 className="modal-title-modern">{editingVideo?.isFolder ? 'Edit NZ Folder Metadata' : 'Edit NZ Footage'}</h3>
-                                <p className="modal-subtitle-modern">
+                                <h3
+                                    className="modal-title-modern"
+                                    style={{
+                                        fontSize: 'clamp(1rem, 3.8vw, 1.45rem)',
+                                        lineHeight: 1.2,
+                                        wordBreak: 'break-word'
+                                    }}
+                                >
+                                    {editingVideo?.isFolder ? 'Edit NZ Folder Metadata' : 'Edit NZ Footage'}
+                                </h3>
+                                <p
+                                    className="modal-subtitle-modern"
+                                    style={{
+                                        fontSize: 'clamp(0.78rem, 2.9vw, 0.98rem)',
+                                        lineHeight: 1.45,
+                                        marginTop: '0.3rem'
+                                    }}
+                                >
                                     {editingVideo?.isFolder
                                         ? 'Update these details across every image in this folder'
                                         : 'Update your footage details for better indexing'}
