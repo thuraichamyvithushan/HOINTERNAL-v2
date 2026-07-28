@@ -58,23 +58,103 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
 
     const handleDelete = async (id) => {
         try {
-            await fetch(`${API_URL}/api/footage/${id}`, { method: 'DELETE' });
-            setVideos(prev => prev.filter(v => v.id !== id));
+            const response = await fetch(`${API_URL}/api/footage/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                setVideos(prev => prev.filter(v => v.id !== id));
+            } else {
+                alert('Failed to delete footage.');
+            }
         } catch (err) {
             console.error('Delete error:', err);
         }
     };
 
-    const handleUpdate = async (id) => {
+    const handleFolderDelete = async (folder) => {
+        const folderItems = folder?.items || [];
+
+        if (folderItems.length === 0) {
+            return;
+        }
+
         try {
-            await fetch(`${API_URL}/api/footage/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editForm)
-            });
-            // Ensure we merge metadata updates while preserving videoUrl, visibility, and region
-            setVideos(prev => prev.map(v => v.id === id ? { ...v, ...editForm } : v));
-            setEditingVideo(null);
+            const deleteResults = await Promise.all(
+                folderItems.map((item) =>
+                    fetch(`${API_URL}/api/footage/${item.id}`, { method: 'DELETE' })
+                )
+            );
+
+            if (deleteResults.every((response) => response.ok)) {
+                const folderIds = new Set(folderItems.map((item) => item.id));
+                setVideos((prev) => prev.filter((item) => !folderIds.has(item.id)));
+                setSelectedVideo((current) => (
+                    current?.isFolder && current.id === folder.id ? null : current
+                ));
+            } else {
+                alert('Failed to delete one or more images from this folder.');
+            }
+        } catch (err) {
+            console.error('Folder delete error:', err);
+        }
+    };
+
+    const handleUpdate = async (item) => {
+        const targetItems = item?.isFolder ? (item.items || []) : [item];
+        const targetIds = new Set(targetItems.map((target) => target.id));
+
+        if (targetItems.length === 0) {
+            return;
+        }
+
+        try {
+            const responses = await Promise.all(
+                targetItems.map((target) =>
+                    fetch(`${API_URL}/api/footage/${target.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(editForm)
+                    })
+                )
+            );
+
+            if (responses.every((response) => response.ok)) {
+                setVideos((prev) => prev.map((video) => (
+                    targetIds.has(video.id) ? { ...video, ...editForm } : video
+                )));
+                setSelectedVideo((current) => {
+                    if (!current) {
+                        return current;
+                    }
+
+                    if (item?.isFolder && current?.isFolder && current.id === item.id) {
+                        return {
+                            ...current,
+                            coverImage: current.coverImage ? { ...current.coverImage, ...editForm } : current.coverImage,
+                            items: current.items.map((folderItem) => ({ ...folderItem, ...editForm }))
+                        };
+                    }
+
+                    if (!item?.isFolder && current?.id === item.id) {
+                        return { ...current, ...editForm };
+                    }
+
+                    if (current?.isFolder) {
+                        return {
+                            ...current,
+                            coverImage: targetIds.has(current.coverImage?.id)
+                                ? { ...current.coverImage, ...editForm }
+                                : current.coverImage,
+                            items: current.items.map((folderItem) => (
+                                targetIds.has(folderItem.id) ? { ...folderItem, ...editForm } : folderItem
+                            ))
+                        };
+                    }
+
+                    return current;
+                });
+                setEditingVideo(null);
+            } else {
+                alert('Failed to update footage.');
+            }
         } catch (err) {
             console.error('Update error:', err);
         }
@@ -151,6 +231,34 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
         });
 
         return displayItems;
+    };
+
+    const buildEditFormValues = (item) => ({
+        deviceName: item?.deviceName || '',
+        species: item?.species || '',
+        activityType: item?.activityType || 'hunting',
+        location: item?.location || '',
+        description: item?.description || '',
+        ausState: item?.ausState || ''
+    });
+
+    const getFolderItemAtIndex = (folder, index = 0) =>
+        folder?.items?.[index] || folder?.coverImage || folder?.items?.[0] || null;
+
+    const canManageFolder = (folder) =>
+        Array.isArray(folder?.items) &&
+        folder.items.length > 0 &&
+        folder.items.every((item) => item.userId === user?.uid);
+
+    const openEditModal = (item, folderIndex = 0) => {
+        const editSource = item?.isFolder ? getFolderItemAtIndex(item, folderIndex) : item;
+
+        if (!editSource) {
+            return;
+        }
+
+        setEditingVideo(item);
+        setEditForm(buildEditFormValues(editSource));
     };
 
     const openViewer = (item) => {
@@ -277,21 +385,39 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                                         <span>{new Date(cardItem.createdAt || Date.now()).toLocaleDateString()}</span>
                                     </div>
                                 </div>
+                                {video.isFolder && canManageFolder(video) && (
+                                    <div className="card-actions-row">
+                                        <button
+                                            className="action-icon-btn edit-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                openEditModal(video, 0);
+                                            }}
+                                            title="Edit Folder"
+                                        >
+                                            <FontAwesomeIcon icon={faEdit} />
+                                        </button>
+                                        <button
+                                            className="action-icon-btn delete-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm(`Delete this image folder and all ${video.items.length} images inside it? This action cannot be undone.`)) {
+                                                    handleFolderDelete(video);
+                                                }
+                                            }}
+                                            title="Delete Folder"
+                                        >
+                                            <FontAwesomeIcon icon={faTrash} />
+                                        </button>
+                                    </div>
+                                )}
                                 {!video.isFolder && (cardItem.userId === user?.uid) && (
                                     <div className="card-actions-row">
                                         <button
                                             className="action-icon-btn edit-btn"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setEditingVideo(cardItem);
-                                                setEditForm({
-                                                    deviceName: cardItem.deviceName || '',
-                                                    species: cardItem.species || '',
-                                                    activityType: cardItem.activityType || 'hunting',
-                                                    location: cardItem.location || '',
-                                                    description: cardItem.description || '',
-                                                    ausState: cardItem.ausState || ''
-                                                });
+                                                openEditModal(cardItem);
                                             }}
                                             title="Edit"
                                         >
@@ -336,8 +462,12 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                                 <FontAwesomeIcon icon={faEdit} />
                             </div>
                             <div className="header-text">
-                                <h3 className="modal-title-modern">Edit NZ Footage</h3>
-                                <p className="modal-subtitle-modern">Update your footage details for better indexing</p>
+                                <h3 className="modal-title-modern">{editingVideo?.isFolder ? 'Edit NZ Folder Metadata' : 'Edit NZ Footage'}</h3>
+                                <p className="modal-subtitle-modern">
+                                    {editingVideo?.isFolder
+                                        ? 'Update these details across every image in this folder'
+                                        : 'Update your footage details for better indexing'}
+                                </p>
                             </div>
                             <button className="close-btn-modern" onClick={() => setEditingVideo(null)}>
                                 <FontAwesomeIcon icon={faXmark} />
@@ -411,7 +541,7 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
 
                         <div className="modern-modal-footer">
                             <button className="modern-btn-secondary" onClick={() => setEditingVideo(null)}>Discard Changes</button>
-                            <button className="modern-btn-primary" onClick={() => handleUpdate(editingVideo.id)}>
+                            <button className="modern-btn-primary" onClick={() => handleUpdate(editingVideo)}>
                                 <FontAwesomeIcon icon={faCheck} /> Update Archive
                             </button>
                         </div>
@@ -512,6 +642,29 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
                                     <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#374151' }}>
                                         Image {currentGalleryIndex + 1} of {selectedVideo.items.length}
                                     </span>
+                                </div>
+                            )}
+
+                            {selectedVideo.isFolder && canManageFolder(selectedVideo) && (
+                                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                    <button
+                                        type="button"
+                                        className="modern-btn-primary"
+                                        onClick={() => openEditModal(selectedVideo, currentGalleryIndex)}
+                                    >
+                                        <FontAwesomeIcon icon={faEdit} /> Edit Folder
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="modern-btn-secondary"
+                                        onClick={() => {
+                                            if (window.confirm(`Delete this image folder and all ${selectedVideo.items.length} images inside it? This action cannot be undone.`)) {
+                                                handleFolderDelete(selectedVideo);
+                                            }
+                                        }}
+                                    >
+                                        <FontAwesomeIcon icon={faTrash} /> Delete Folder
+                                    </button>
                                 </div>
                             )}
 
