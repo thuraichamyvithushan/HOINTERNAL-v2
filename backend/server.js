@@ -208,17 +208,24 @@ app.post('/api/footage', async (req, res) => {
 });
 
 // GET All Footage (Global Feed)
+// GET All Footage (Global Feed)
 app.get('/api/footage/all', async (req, res) => {
     try {
         const { region } = req.query;
-        let query = db.collection('footage').where('visibility', '==', 'public');
 
-        const snapshot = await query.limit(500).get(); // Get more to allow filtering
-        console.log(`Initial fetched ${snapshot.size} public videos`);
+        const query = db
+            .collection('footage')
+            .where('visibility', '==', 'public');
+
+        const snapshot = await query.get();
+
+        console.log(`Initial fetched ${snapshot.size} public footage items`);
 
         let videos = snapshot.docs.map(doc => {
             const data = doc.data();
+
             let createdAt = null;
+
             if (data.createdAt) {
                 if (typeof data.createdAt.toDate === 'function') {
                     createdAt = data.createdAt.toDate().toISOString();
@@ -226,6 +233,7 @@ app.get('/api/footage/all', async (req, res) => {
                     createdAt = new Date(data.createdAt).toISOString();
                 }
             }
+
             return {
                 id: doc.id,
                 ...data,
@@ -233,20 +241,30 @@ app.get('/api/footage/all', async (req, res) => {
             };
         });
 
-        // In-memory regional filtering to support legacy data (where region is missing)
+        // Regional filtering
         if (region === 'AU') {
-            videos = videos.filter(v => v.region === 'AU' || !v.region);
+            videos = videos.filter(
+                v => v.region === 'AU' || !v.region
+            );
         } else if (region === 'NZ') {
-            videos = videos.filter(v => v.region === 'NZ');
+            videos = videos.filter(
+                v => v.region === 'NZ'
+            );
         }
 
-        console.log(`Returning ${videos.length} videos after regional filtering`);
+        // Newest first
+        videos.sort(
+            (a, b) =>
+                new Date(b.createdAt || 0) -
+                new Date(a.createdAt || 0)
+        );
 
-        // Sort in-memory and limit to 100
-        videos.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-        videos = videos.slice(0, 100);
+        console.log(
+            `Returning ${videos.length} public footage items for region: ${region || 'ALL'}`
+        );
 
         res.status(200).json(videos);
+
     } catch (error) {
         console.error('Error fetching global footage:', error);
         res.status(500).json({ error: error.message });
