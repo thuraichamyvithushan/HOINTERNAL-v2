@@ -213,7 +213,7 @@ app.get('/api/footage/all', async (req, res) => {
         const { region } = req.query;
         let query = db.collection('footage').where('visibility', '==', 'public');
 
-        const snapshot = await query.limit(500).get(); // Get more to allow filtering
+        const snapshot = await query.get();
         console.log(`Initial fetched ${snapshot.size} public videos`);
 
         let videos = snapshot.docs.map(doc => {
@@ -242,9 +242,8 @@ app.get('/api/footage/all', async (req, res) => {
 
         console.log(`Returning ${videos.length} videos after regional filtering`);
 
-        // Sort in-memory and limit to 100
+        // Sort in-memory to avoid extra index requirements while returning the full public feed.
         videos.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-        videos = videos.slice(0, 100);
 
         res.status(200).json(videos);
     } catch (error) {
