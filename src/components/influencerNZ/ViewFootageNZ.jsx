@@ -7,7 +7,14 @@ import { API_URL } from '../../config';
 import { detectFootageKind } from '../../utils/uploadFootage';
 import './InfluencerDashboardNZ.css';
 
-const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigger = 0, overrideUserId = null }) => {
+const ViewFootageNZ = ({
+    isGlobal = false,
+    visibilityFilter = null,
+    refreshTrigger = 0,
+    overrideUserId = null,
+    searchByProductOnly = false,
+    searchPlaceholder = 'Search NZ footage...'
+}) => {
     const { user } = useContext(AuthContext);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -179,11 +186,18 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
         !!video?.uploadBatchId &&
         Number(video?.uploadBatchImageCount || 0) > 1;
 
-    const matchesSearch = (video) =>
-        (video.deviceName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.species || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.location || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (video) => {
+        const normalizedSearchTerm = searchTerm.toLowerCase();
+
+        if (searchByProductOnly) {
+            return (video.deviceName || '').toLowerCase().includes(normalizedSearchTerm);
+        }
+
+        return (video.deviceName || '').toLowerCase().includes(normalizedSearchTerm) ||
+            (video.species || '').toLowerCase().includes(normalizedSearchTerm) ||
+            (video.description || '').toLowerCase().includes(normalizedSearchTerm) ||
+            (video.location || '').toLowerCase().includes(normalizedSearchTerm);
+    };
 
     const buildDisplayItems = (items) => {
         const groupedBatchIds = new Set();
@@ -287,23 +301,27 @@ const ViewFootageNZ = ({ isGlobal = false, visibilityFilter = null, refreshTrigg
         return (
             <div className="loading-container">
                 <div className="spinner"></div>
-                <p className="loading-text">Loading NZ footage...</p>
+                <p className="loading-text">Scanning your archive...</p>
             </div>
         );
     }
 
     return (
         <div className="view-container animate-fade-in">
+            {/* Search Header */}
             <div className="search-header">
                 <div className="search-box">
                     <FontAwesomeIcon icon={faSearch} className="search-icon" />
                     <input
                         type="text"
-                        placeholder="Search NZ footage..."
+                        placeholder={searchPlaceholder}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="search-input"
                     />
+                </div>
+                <div className="stats-badge">
+                    Total: <span className="stats-count">{filteredVideos.length}</span> Items
                 </div>
             </div>
 

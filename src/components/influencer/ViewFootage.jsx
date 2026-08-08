@@ -8,7 +8,14 @@ import { API_URL } from '../../config';
 import { detectFootageKind } from '../../utils/uploadFootage';
 import './InfluencerDashboard.css';
 
-const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger = 0, overrideUserId = null }) => {
+const ViewFootage = ({
+    isGlobal = false,
+    visibilityFilter = null,
+    refreshTrigger = 0,
+    overrideUserId = null,
+    searchByProductOnly = false,
+    searchPlaceholder = 'Search by device, species, or location...'
+}) => {
     const { user } = useContext(AuthContext);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -174,11 +181,18 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
         !!video?.uploadBatchId &&
         Number(video?.uploadBatchImageCount || 0) > 1;
 
-    const matchesSearch = (video) =>
-        (video.deviceName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.species || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (video.location || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (video) => {
+        const normalizedSearchTerm = searchTerm.toLowerCase();
+
+        if (searchByProductOnly) {
+            return (video.deviceName || '').toLowerCase().includes(normalizedSearchTerm);
+        }
+
+        return (video.deviceName || '').toLowerCase().includes(normalizedSearchTerm) ||
+            (video.species || '').toLowerCase().includes(normalizedSearchTerm) ||
+            (video.description || '').toLowerCase().includes(normalizedSearchTerm) ||
+            (video.location || '').toLowerCase().includes(normalizedSearchTerm);
+    };
 
     const buildDisplayItems = (items) => {
         const groupedBatchIds = new Set();
@@ -300,7 +314,7 @@ const ViewFootage = ({ isGlobal = false, visibilityFilter = null, refreshTrigger
                     />
                     <input
                         type="text"
-                        placeholder="Search by device, species, or location..."
+                        placeholder={searchPlaceholder}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="search-input"

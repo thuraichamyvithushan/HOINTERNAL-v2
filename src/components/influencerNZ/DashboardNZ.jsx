@@ -94,7 +94,13 @@ const DashboardNZ = () => {
             <h2 className="section-heading">shared ambassador footage</h2>
           </div>
           <div className="view-grid-wrapper">
-            <ViewFootageNZ isGlobal={true} visibilityFilter="public" refreshTrigger={refreshTrigger} />
+            <ViewFootageNZ
+              isGlobal={true}
+              visibilityFilter="public"
+              refreshTrigger={refreshTrigger}
+              searchByProductOnly={true}
+              searchPlaceholder="Search by product name..."
+            />
           </div>
         </div>
 
