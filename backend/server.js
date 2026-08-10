@@ -80,6 +80,27 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+const resolveFootageStoragePath = (footage = {}) => {
+    if (footage.storagePath) {
+        return footage.storagePath;
+    }
+
+    if (typeof footage.videoUrl === 'string' && footage.videoUrl.startsWith('http')) {
+        try {
+            const url = new URL(footage.videoUrl);
+            const encodedPath = url.pathname.split('/o/')[1];
+
+            if (encodedPath) {
+                return decodeURIComponent(encodedPath);
+            }
+        } catch (error) {
+            console.warn('Failed to parse storage path from video URL:', error.message);
+        }
+    }
+
+    return '';
+};
+
 const fs = require('fs');
 const os = require('os');
 
@@ -289,6 +310,56 @@ app.get('/api/footage/:userId', async (req, res) => {
         res.status(200).json(videos);
     } catch (error) {
         console.error('Error fetching footage:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/footage/download/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { downloadName } = req.query;
+        const docRef = db.collection('footage').doc(id);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ error: 'Footage not found' });
+        }
+
+        const data = doc.data();
+        const storagePath = resolveFootageStoragePath(data);
+
+        if (!storagePath) {
+            return res.status(400).json({ error: 'Storage path not available for this file' });
+        }
+
+        const storageFile = bucket.file(storagePath);
+        const [exists] = await storageFile.exists();
+
+        if (!exists) {
+            return res.status(404).json({ error: 'Storage file not found' });
+        }
+
+        const [metadata] = await storageFile.getMetadata();
+        const resolvedDownloadName = typeof downloadName === 'string' && downloadName.trim()
+            ? downloadName.trim()
+            : (data.originalFileName || storagePath.split('/').pop() || `footage-${id}`);
+
+        res.setHeader('Content-Disposition', `attachment; filename="${resolvedDownloadName.replace(/"/g, '')}"`);
+        res.setHeader('Content-Type', metadata.contentType || 'application/octet-stream');
+
+        storageFile.createReadStream()
+            .on('error', (error) => {
+                console.error('Storage download stream error:', error);
+
+                if (!res.headersSent) {
+                    res.status(500).json({ error: 'Failed to stream file download' });
+                } else {
+                    res.destroy(error);
+                }
+            })
+            .pipe(res);
+    } catch (error) {
+        console.error('Error downloading footage:', error);
         res.status(500).json({ error: error.message });
     }
 });

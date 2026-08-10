@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faPlay, faClock, faMicrochip, faVideoSlash, faLocationDot, faPaw, faTrash, faEdit, faXmark, faCheck, faUser, faImage, faImages, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faPlay, faClock, faMicrochip, faVideoSlash, faLocationDot, faPaw, faTrash, faEdit, faXmark, faCheck, faUser, faImage, faImages, faChevronLeft, faChevronRight, faDownload } from '@fortawesome/free-solid-svg-icons';
 import { API_URL } from '../../config';
 import { detectFootageKind } from '../../utils/uploadFootage';
 import './InfluencerDashboardNZ.css';
@@ -22,6 +22,8 @@ const ViewFootageNZ = ({
     const [visibleCount, setVisibleCount] = useState(8);
     const [selectedVideo, setSelectedVideo] = useState(null);
     const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [downloadFeedback, setDownloadFeedback] = useState('');
     const [editingVideo, setEditingVideo] = useState(null);
     const [editForm, setEditForm] = useState({
         deviceName: '',
@@ -278,7 +280,44 @@ const ViewFootageNZ = ({
     const openViewer = (item) => {
         setSelectedVideo(item);
         setCurrentGalleryIndex(0);
+        setDownloadFeedback('');
+        setIsDownloading(false);
     };
+
+    useEffect(() => {
+        if (!selectedVideo) {
+            return undefined;
+        }
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setSelectedVideo(null);
+                return;
+            }
+
+            if (!selectedVideo.isFolder || selectedVideo.items.length <= 1) {
+                return;
+            }
+
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                setCurrentGalleryIndex((prev) => (
+                    prev === 0 ? selectedVideo.items.length - 1 : prev - 1
+                ));
+            }
+
+            if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                setCurrentGalleryIndex((prev) => (
+                    prev === selectedVideo.items.length - 1 ? 0 : prev + 1
+                ));
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedVideo]);
 
     useEffect(() => {
         if (!user) return;
@@ -296,6 +335,158 @@ const ViewFootageNZ = ({
 
     const visibleVideos = filteredVideos.slice(0, visibleCount);
     const hasMoreVideos = filteredVideos.length > visibleCount;
+    const activeViewerItem = selectedVideo?.isFolder
+        ? getFolderItemAtIndex(selectedVideo, currentGalleryIndex)
+        : selectedVideo;
+    const folderHasMultipleImages = !!(selectedVideo?.isFolder && selectedVideo.items.length > 1);
+    const invalidFilenameCharacters = '<>:"/\\|?*';
+
+    const sanitizeFileName = (value = 'download') =>
+        value
+            .split('')
+            .map((character) => {
+                const characterCode = character.charCodeAt(0);
+
+                if (characterCode < 32 || invalidFilenameCharacters.includes(character)) {
+                    return ' ';
+                }
+
+                return character;
+            })
+            .join('')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+    const getFileExtension = (item) => {
+        const originalFileName = item?.originalFileName || '';
+        const originalDotIndex = originalFileName.lastIndexOf('.');
+
+        if (originalDotIndex > -1 && originalDotIndex < originalFileName.length - 1) {
+            return originalFileName.slice(originalDotIndex);
+        }
+
+        try {
+            const mediaUrl = getMediaUrl(item);
+            const pathname = new URL(mediaUrl, window.location.href).pathname;
+            const decodedPath = decodeURIComponent(pathname);
+            const pathFileName = decodedPath.split('/').pop() || '';
+            const pathDotIndex = pathFileName.lastIndexOf('.');
+
+            if (pathDotIndex > -1 && pathDotIndex < pathFileName.length - 1) {
+                return pathFileName.slice(pathDotIndex);
+            }
+        } catch (error) {
+            console.warn('Unable to infer file extension from media URL:', error);
+        }
+
+        return getMediaKind(item) === 'video' ? '.mp4' : '.jpg';
+    };
+
+    const buildDownloadFileName = (item, options = {}) => {
+        const { folderName = '', index = null } = options;
+        const extension = getFileExtension(item);
+        const fallbackBaseName = folderName || item?.deviceName || item?.originalFileName?.replace(/\.[^.]+$/, '') || getMediaKind(item) || 'download';
+        const normalizedBaseName = sanitizeFileName(fallbackBaseName) || 'download';
+
+        if (typeof index === 'number') {
+            return `${normalizedBaseName}-${String(index + 1).padStart(2, '0')}${extension}`;
+        }
+
+        return `${normalizedBaseName}${extension}`;
+    };
+
+    const buildDownloadUrl = (item, options = {}) => {
+        if (!item?.id) {
+            throw new Error('Missing footage id for download.');
+        }
+
+        const fileName = buildDownloadFileName(item, options);
+        const query = new URLSearchParams({
+            downloadName: fileName,
+            ts: String(Date.now())
+        });
+
+        return `${API_URL}/api/footage/download/${item.id}?${query.toString()}`;
+    };
+
+    const startBackgroundDownload = (url) => {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = url;
+        document.body.appendChild(iframe);
+
+        window.setTimeout(() => {
+            if (iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
+            }
+        }, 60000);
+    };
+
+    const closeViewer = () => {
+        setSelectedVideo(null);
+        setDownloadFeedback('');
+        setIsDownloading(false);
+    };
+
+    const goToPreviousGalleryItem = () => {
+        if (!folderHasMultipleImages) {
+            return;
+        }
+
+        setCurrentGalleryIndex((prev) => (
+            prev === 0 ? selectedVideo.items.length - 1 : prev - 1
+        ));
+    };
+
+    const goToNextGalleryItem = () => {
+        if (!folderHasMultipleImages) {
+            return;
+        }
+
+        setCurrentGalleryIndex((prev) => (
+            prev === selectedVideo.items.length - 1 ? 0 : prev + 1
+        ));
+    };
+
+    const handleViewerDownload = async () => {
+        if (!selectedVideo || !activeViewerItem || isDownloading) {
+            return;
+        }
+
+        setIsDownloading(true);
+        setDownloadFeedback('Preparing your download. It may take a few seconds to appear on your device.');
+
+        try {
+            if (selectedVideo.isFolder) {
+                const confirmed = window.confirm('This will download all images. Yes or No?');
+
+                if (!confirmed) {
+                    setDownloadFeedback('Download cancelled.');
+                    return;
+                }
+
+                const folderName = selectedVideo.folderName || activeViewerItem.deviceName || 'image-folder';
+                for (const [index, item] of selectedVideo.items.entries()) {
+                    startBackgroundDownload(buildDownloadUrl(item, { folderName, index }));
+
+                    if (index < selectedVideo.items.length - 1) {
+                        await new Promise((resolve) => window.setTimeout(resolve, 150));
+                    }
+                }
+
+                setDownloadFeedback(`Download request sent for ${selectedVideo.items.length} images. They may take a few seconds to appear on your device.`);
+                return;
+            }
+
+            startBackgroundDownload(buildDownloadUrl(selectedVideo));
+            setDownloadFeedback(`Download request sent for this ${getMediaKind(selectedVideo)}. It may take a few seconds to appear on your device.`);
+        } catch (error) {
+            console.error('Download error:', error);
+            setDownloadFeedback('Unable to start the download right now. Please try again.');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -593,15 +784,15 @@ const ViewFootageNZ = ({
             )}
 
             {selectedVideo && createPortal(
-                <div className="modal-overlay" onClick={() => setSelectedVideo(null)}>
+                <div className="modal-overlay" onClick={closeViewer}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-video-container">
-                            {selectedVideo.isFolder && selectedVideo.items.length > 1 && (
+                            {folderHasMultipleImages && (
                                 <button
                                     type="button"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setCurrentGalleryIndex((prev) => (prev === 0 ? selectedVideo.items.length - 1 : prev - 1));
+                                        goToPreviousGalleryItem();
                                     }}
                                     style={{
                                         position: 'absolute',
@@ -627,8 +818,8 @@ const ViewFootageNZ = ({
                             )}
                             {selectedVideo.isFolder ? (
                                 <img
-                                    src={getMediaUrl(selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)}
-                                    alt={(selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.deviceName || 'Uploaded image'}
+                                    src={getMediaUrl(activeViewerItem)}
+                                    alt={activeViewerItem?.deviceName || 'Uploaded image'}
                                     className="modal-video-player"
                                 />
                             ) : getMediaKind(selectedVideo) === 'image' ? (
@@ -640,12 +831,12 @@ const ViewFootageNZ = ({
                             ) : (
                                 <video src={getMediaUrl(selectedVideo)} controls autoPlay className="modal-video-player" />
                             )}
-                            {selectedVideo.isFolder && selectedVideo.items.length > 1 && (
+                            {folderHasMultipleImages && (
                                 <button
                                     type="button"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setCurrentGalleryIndex((prev) => (prev === selectedVideo.items.length - 1 ? 0 : prev + 1));
+                                        goToNextGalleryItem();
                                     }}
                                     style={{
                                         position: 'absolute',
@@ -669,44 +860,89 @@ const ViewFootageNZ = ({
                                     <FontAwesomeIcon icon={faChevronRight} />
                                 </button>
                             )}
+                            <button onClick={closeViewer} className="modal-close-btn">
+                                &times;
+                            </button>
                         </div>
                         <div className="modal-details">
                             <div className="modal-details-title-row">
                                 <h2 className="modal-title">
                                     {selectedVideo.isFolder
-                                        ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.deviceName || 'Image Folder'
+                                        ? activeViewerItem?.deviceName || 'Image Folder'
                                         : (selectedVideo.deviceName || 'No Title')}
                                 </h2>
                             </div>
 
-                            {selectedVideo.isFolder && selectedVideo.items.length > 1 && (
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#374151' }}>
+                            {selectedVideo.isFolder && (
+                                <div className="modal-gallery-summary">
+                                    <span className="modal-gallery-counter">
                                         Image {currentGalleryIndex + 1} of {selectedVideo.items.length}
                                     </span>
+                                    {folderHasMultipleImages && (
+                                        <span className="modal-gallery-hint">
+                                            Use arrow keys or choose a thumbnail below
+                                        </span>
+                                    )}
                                 </div>
                             )}
 
-                            {selectedVideo.isFolder && canManageFolder(selectedVideo) && (
-                                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                    <button
-                                        type="button"
-                                        className="modern-btn-primary"
-                                        onClick={() => openEditModal(selectedVideo, currentGalleryIndex)}
-                                    >
-                                        <FontAwesomeIcon icon={faEdit} /> Edit Folder
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="modern-btn-secondary"
-                                        onClick={() => {
-                                            if (window.confirm(`Delete this image folder and all ${selectedVideo.items.length} images inside it? This action cannot be undone.`)) {
-                                                handleFolderDelete(selectedVideo);
-                                            }
-                                        }}
-                                    >
-                                        <FontAwesomeIcon icon={faTrash} /> Delete Folder
-                                    </button>
+                            {selectedVideo.isFolder && (
+                                <div className="modal-gallery-grid" aria-label="Folder image gallery">
+                                    {selectedVideo.items.map((item, index) => (
+                                        <button
+                                            key={item.id || `${selectedVideo.id}-${index}`}
+                                            type="button"
+                                            className={`modal-gallery-thumb${index === currentGalleryIndex ? ' active' : ''}`}
+                                            onClick={() => setCurrentGalleryIndex(index)}
+                                            aria-label={`Show image ${index + 1}`}
+                                            aria-pressed={index === currentGalleryIndex}
+                                        >
+                                            <img
+                                                src={getMediaUrl(item)}
+                                                alt={item.deviceName || item.originalFileName || `Gallery image ${index + 1}`}
+                                                className="modal-gallery-thumb-image"
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="modal-action-row">
+                                <button
+                                    type="button"
+                                    className="modern-btn-primary"
+                                    onClick={handleViewerDownload}
+                                    disabled={isDownloading}
+                                >
+                                    <FontAwesomeIcon icon={faDownload} /> {isDownloading ? 'Downloading...' : 'Download'}
+                                </button>
+                                {selectedVideo.isFolder && canManageFolder(selectedVideo) && (
+                                    <React.Fragment>
+                                        <button
+                                            type="button"
+                                            className="modern-btn-secondary"
+                                            onClick={() => openEditModal(selectedVideo, currentGalleryIndex)}
+                                        >
+                                            <FontAwesomeIcon icon={faEdit} /> Edit Folder
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="modern-btn-secondary"
+                                            onClick={() => {
+                                                if (window.confirm(`Delete this image folder and all ${selectedVideo.items.length} images inside it? This action cannot be undone.`)) {
+                                                    handleFolderDelete(selectedVideo);
+                                                }
+                                            }}
+                                        >
+                                            <FontAwesomeIcon icon={faTrash} /> Delete Folder
+                                        </button>
+                                    </React.Fragment>
+                                )}
+                            </div>
+
+                            {downloadFeedback && (
+                                <div className="modal-feedback-message">
+                                    {downloadFeedback}
                                 </div>
                             )}
 
@@ -717,7 +953,7 @@ const ViewFootageNZ = ({
                                         <span className="modal-meta-label">Influencer</span>
                                         <span className="modal-meta-value">
                                             {selectedVideo.isFolder
-                                                ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.userName || 'Huntsman Influencer'
+                                                ? activeViewerItem?.userName || 'Huntsman Influencer'
                                                 : (selectedVideo.userName || 'Huntsman Influencer')}
                                         </span>
                                     </div>
@@ -728,7 +964,7 @@ const ViewFootageNZ = ({
                                         <span className="modal-meta-label">Region</span>
                                         <span className="modal-meta-value">
                                             {selectedVideo.isFolder
-                                                ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.ausState || ((selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.location || 'New Zealand')
+                                                ? activeViewerItem?.ausState || (activeViewerItem?.location || 'New Zealand')
                                                 : (selectedVideo.ausState || (selectedVideo.location || 'New Zealand'))}
                                         </span>
                                     </div>
@@ -739,7 +975,7 @@ const ViewFootageNZ = ({
                                         <span className="modal-meta-label">Species</span>
                                         <span className="modal-meta-value">
                                             {selectedVideo.isFolder
-                                                ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.species || 'Various'
+                                                ? activeViewerItem?.species || 'Various'
                                                 : (selectedVideo.species || 'Various')}
                                         </span>
                                     </div>
@@ -761,7 +997,7 @@ const ViewFootageNZ = ({
                                 <h4 className="modal-section-title">Notes & Context</h4>
                                 <p className="modal-description">
                                     {selectedVideo.isFolder
-                                        ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.description || 'No additional details provided for this image.'
+                                        ? activeViewerItem?.description || 'No additional details provided for this image.'
                                         : (selectedVideo.description || 'No additional details provided for this clip.')}
                                 </p>
                             </div>
@@ -769,7 +1005,7 @@ const ViewFootageNZ = ({
                             <div className="modal-footer-meta">
                                 Uploaded on {new Date(
                                     selectedVideo.isFolder
-                                        ? (selectedVideo.items[currentGalleryIndex] || selectedVideo.coverImage)?.createdAt || Date.now()
+                                        ? activeViewerItem?.createdAt || Date.now()
                                         : (selectedVideo.createdAt || Date.now())
                                 ).toLocaleString()}
                             </div>
