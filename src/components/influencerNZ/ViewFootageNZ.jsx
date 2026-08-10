@@ -24,6 +24,7 @@ const ViewFootageNZ = ({
     const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
     const [isDownloading, setIsDownloading] = useState(false);
     const [downloadFeedback, setDownloadFeedback] = useState('');
+    const [downloadProgress, setDownloadProgress] = useState(null);
     const [editingVideo, setEditingVideo] = useState(null);
     const [editForm, setEditForm] = useState({
         deviceName: '',
@@ -282,6 +283,7 @@ const ViewFootageNZ = ({
         setCurrentGalleryIndex(0);
         setDownloadFeedback('');
         setIsDownloading(false);
+        setDownloadProgress(null);
     };
 
     useEffect(() => {
@@ -409,23 +411,95 @@ const ViewFootageNZ = ({
         return `${API_URL}/api/footage/download/${item.id}?${query.toString()}`;
     };
 
-    const startBackgroundDownload = (url) => {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = url;
-        document.body.appendChild(iframe);
+    const triggerBlobDownload = (blob, fileName) => {
+        const objectUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
         window.setTimeout(() => {
-            if (iframe.parentNode) {
-                iframe.parentNode.removeChild(iframe);
+            window.URL.revokeObjectURL(objectUrl);
+        }, 1000);
+    };
+
+    const updateDownloadProgress = ({ currentFileIndex, totalFiles, currentFileName, filePercent }) => {
+        const safePercent = Math.max(0, Math.min(100, filePercent));
+        const overallPercent = totalFiles > 1
+            ? (((currentFileIndex - 1) + (safePercent / 100)) / totalFiles) * 100
+            : safePercent;
+
+        setDownloadProgress({
+            currentFileIndex,
+            totalFiles,
+            currentFileName,
+            filePercent: safePercent,
+            overallPercent: Math.max(0, Math.min(100, overallPercent))
+        });
+    };
+
+    const downloadMediaItem = async (item, options = {}, progressContext = { currentFileIndex: 1, totalFiles: 1 }) => {
+        const fileName = buildDownloadFileName(item, options);
+        const response = await fetch(buildDownloadUrl(item, options));
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch media for download: ${response.status}`);
+        }
+
+        const totalBytes = Number(response.headers.get('content-length') || 0);
+
+        if (!response.body) {
+            const blob = await response.blob();
+            updateDownloadProgress({
+                ...progressContext,
+                currentFileName: fileName,
+                filePercent: 100
+            });
+            triggerBlobDownload(blob, fileName);
+            return;
+        }
+
+        const reader = response.body.getReader();
+        const chunks = [];
+        let receivedBytes = 0;
+
+        while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+                break;
             }
-        }, 60000);
+
+            chunks.push(value);
+            receivedBytes += value.length;
+
+            updateDownloadProgress({
+                ...progressContext,
+                currentFileName: fileName,
+                filePercent: totalBytes > 0 ? (receivedBytes / totalBytes) * 100 : 0
+            });
+        }
+
+        const blob = new Blob(chunks, {
+            type: response.headers.get('content-type') || 'application/octet-stream'
+        });
+
+        updateDownloadProgress({
+            ...progressContext,
+            currentFileName: fileName,
+            filePercent: 100
+        });
+        triggerBlobDownload(blob, fileName);
     };
 
     const closeViewer = () => {
         setSelectedVideo(null);
         setDownloadFeedback('');
         setIsDownloading(false);
+        setDownloadProgress(null);
     };
 
     const goToPreviousGalleryItem = () => {
@@ -454,7 +528,8 @@ const ViewFootageNZ = ({
         }
 
         setIsDownloading(true);
-        setDownloadFeedback('Preparing your download. It may take a few seconds to appear on your device.');
+        setDownloadFeedback('Preparing your download...');
+        setDownloadProgress(null);
 
         try {
             if (selectedVideo.isFolder) {
@@ -467,26 +542,38 @@ const ViewFootageNZ = ({
 
                 const folderName = selectedVideo.folderName || activeViewerItem.deviceName || 'image-folder';
                 for (const [index, item] of selectedVideo.items.entries()) {
-                    startBackgroundDownload(buildDownloadUrl(item, { folderName, index }));
+                    await downloadMediaItem(
+                        item,
+                        { folderName, index },
+                        {
+                            currentFileIndex: index + 1,
+                            totalFiles: selectedVideo.items.length
+                        }
+                    );
 
                     if (index < selectedVideo.items.length - 1) {
                         await new Promise((resolve) => window.setTimeout(resolve, 150));
                     }
                 }
 
-                setDownloadFeedback(`Download request sent for ${selectedVideo.items.length} images. They may take a few seconds to appear on your device.`);
+                setDownloadFeedback(`Downloaded ${selectedVideo.items.length} images.`);
                 return;
             }
 
-            startBackgroundDownload(buildDownloadUrl(selectedVideo));
-            setDownloadFeedback(`Download request sent for this ${getMediaKind(selectedVideo)}. It may take a few seconds to appear on your device.`);
+            await downloadMediaItem(selectedVideo);
+            setDownloadFeedback(`Downloaded this ${getMediaKind(selectedVideo)}.`);
         } catch (error) {
             console.error('Download error:', error);
-            setDownloadFeedback('Unable to start the download right now. Please try again.');
+            setDownloadFeedback('Unable to download this file right now. Please try again.');
+            setDownloadProgress(null);
         } finally {
             setIsDownloading(false);
         }
     };
+
+    const downloadButtonLabel = isDownloading
+        ? `Downloading ${Math.round(downloadProgress?.overallPercent || 0)}%`
+        : 'Download';
 
     if (loading) {
         return (
@@ -914,7 +1001,7 @@ const ViewFootageNZ = ({
                                     onClick={handleViewerDownload}
                                     disabled={isDownloading}
                                 >
-                                    <FontAwesomeIcon icon={faDownload} /> {isDownloading ? 'Downloading...' : 'Download'}
+                                    <FontAwesomeIcon icon={faDownload} /> {downloadButtonLabel}
                                 </button>
                                 {selectedVideo.isFolder && canManageFolder(selectedVideo) && (
                                     <React.Fragment>
@@ -943,6 +1030,28 @@ const ViewFootageNZ = ({
                             {downloadFeedback && (
                                 <div className="modal-feedback-message">
                                     {downloadFeedback}
+                                </div>
+                            )}
+
+                            {downloadProgress && (
+                                <div className="modal-download-progress" aria-live="polite">
+                                    <div className="modal-progress-meta">
+                                        <span>
+                                            {downloadProgress.totalFiles > 1
+                                                ? `File ${downloadProgress.currentFileIndex} of ${downloadProgress.totalFiles}`
+                                                : 'Downloading file'}
+                                        </span>
+                                        <span>{Math.round(downloadProgress.overallPercent)}%</span>
+                                    </div>
+                                    <div className="modal-progress-track">
+                                        <div
+                                            className="modal-progress-fill"
+                                            style={{ width: `${downloadProgress.overallPercent}%` }}
+                                        />
+                                    </div>
+                                    <div className="modal-progress-file-name">
+                                        {downloadProgress.currentFileName}
+                                    </div>
                                 </div>
                             )}
 

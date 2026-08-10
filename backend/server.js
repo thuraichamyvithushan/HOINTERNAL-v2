@@ -346,6 +346,9 @@ app.get('/api/footage/download/:id', async (req, res) => {
 
         res.setHeader('Content-Disposition', `attachment; filename="${resolvedDownloadName.replace(/"/g, '')}"`);
         res.setHeader('Content-Type', metadata.contentType || 'application/octet-stream');
+        if (metadata.size) {
+            res.setHeader('Content-Length', metadata.size);
+        }
 
         storageFile.createReadStream()
             .on('error', (error) => {
