@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { firestore } from '../../firebase';
+import { auth } from '../../firebase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faPlay, faClock, faMicrochip, faVideoSlash, faLocationDot, faPaw, faTrash, faEdit, faXmark, faCheck, faUser, faImage, faImages, faChevronLeft, faChevronRight, faDownload } from '@fortawesome/free-solid-svg-icons';
 import { API_URL } from '../../config';
@@ -17,6 +17,7 @@ const ViewFootage = ({
     searchPlaceholder = 'Search by device, species, or location...'
 }) => {
     const { user } = useContext(AuthContext);
+    const isAdmin = user?.role === 'admin';
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -408,6 +409,19 @@ const ViewFootage = ({
         return `${API_URL}/api/footage/download/${item.id}?${query.toString()}`;
     };
 
+    const getDownloadRequestHeaders = async () => {
+        const currentUser = auth.currentUser;
+
+        if (!currentUser) {
+            throw new Error('You must be signed in as an admin to download footage.');
+        }
+
+        const token = await currentUser.getIdToken();
+        return {
+            Authorization: `Bearer ${token}`
+        };
+    };
+
     const triggerBlobDownload = (blob, fileName) => {
         const objectUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -440,7 +454,9 @@ const ViewFootage = ({
 
     const downloadMediaItem = async (item, options = {}, progressContext = { currentFileIndex: 1, totalFiles: 1 }) => {
         const fileName = buildDownloadFileName(item, options);
-        const response = await fetch(buildDownloadUrl(item, options));
+        const response = await fetch(buildDownloadUrl(item, options), {
+            headers: await getDownloadRequestHeaders()
+        });
 
         if (!response.ok) {
             throw new Error(`Failed to fetch media for download: ${response.status}`);
@@ -520,7 +536,7 @@ const ViewFootage = ({
     };
 
     const handleViewerDownload = async () => {
-        if (!selectedVideo || !activeViewerItem || isDownloading) {
+        if (!isAdmin || !selectedVideo || !activeViewerItem || isDownloading) {
             return;
         }
 
@@ -1028,14 +1044,16 @@ const ViewFootage = ({
                             )}
 
                             <div className="modal-action-row">
-                                <button
-                                    type="button"
-                                    className="modern-btn-primary"
-                                    onClick={handleViewerDownload}
-                                    disabled={isDownloading}
-                                >
-                                    <FontAwesomeIcon icon={faDownload} /> {downloadButtonLabel}
-                                </button>
+                                {isAdmin && (
+                                    <button
+                                        type="button"
+                                        className="modern-btn-primary"
+                                        onClick={handleViewerDownload}
+                                        disabled={isDownloading}
+                                    >
+                                        <FontAwesomeIcon icon={faDownload} /> {downloadButtonLabel}
+                                    </button>
+                                )}
                                 {selectedVideo.isFolder && canManageFolder(selectedVideo) && (
                                     <>
                                         <button

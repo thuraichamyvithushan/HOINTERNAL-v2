@@ -101,6 +101,46 @@ const resolveFootageStoragePath = (footage = {}) => {
     return '';
 };
 
+const getBearerToken = (req) => {
+    const authHeader = req.headers.authorization || '';
+
+    if (!authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+
+    return authHeader.slice(7).trim();
+};
+
+const requireAdminRequest = async (req, res) => {
+    const token = getBearerToken(req);
+
+    if (!token) {
+        res.status(401).json({ error: 'Authentication required' });
+        return null;
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+        const storedRole = userDoc.exists ? userDoc.data()?.role : null;
+        const effectiveRole = storedRole || decodedToken.role || null;
+
+        if (effectiveRole !== 'admin') {
+            res.status(403).json({ error: 'Admin access required' });
+            return null;
+        }
+
+        return {
+            uid: decodedToken.uid,
+            role: effectiveRole
+        };
+    } catch (error) {
+        console.error('Admin auth verification failed:', error);
+        res.status(401).json({ error: 'Invalid or expired authentication token' });
+        return null;
+    }
+};
+
 const fs = require('fs');
 const os = require('os');
 
@@ -316,6 +356,12 @@ app.get('/api/footage/:userId', async (req, res) => {
 
 app.get('/api/footage/download/:id', async (req, res) => {
     try {
+        const adminUser = await requireAdminRequest(req, res);
+
+        if (!adminUser) {
+            return;
+        }
+
         const { id } = req.params;
         const { downloadName } = req.query;
         const docRef = db.collection('footage').doc(id);
