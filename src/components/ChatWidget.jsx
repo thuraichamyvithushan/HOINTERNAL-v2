@@ -6,14 +6,18 @@ import {
   faCheck,
   faChevronLeft,
   faComments,
+  faFileLines,
+  faImage,
   faMagnifyingGlass,
   faPaperPlane,
+  faPaperclip,
   faPenToSquare,
+  faReply,
   faTrashCan,
   faUserShield,
   faXmark
 } from "@fortawesome/free-solid-svg-icons";
-import firebase, { auth, firestore } from "../firebase";
+import firebase, { auth, firestore, storage } from "../firebase";
 import { API_URL, SOCKET_NOTIFICATIONS_ENABLED, SOCKET_URL } from "../config";
 import { AuthContext } from "../context/AuthContext";
 import "./ChatWidget.css";
@@ -21,6 +25,7 @@ import "./ChatWidget.css";
 const PRESENCE_HEARTBEAT_MS = 45000;
 const PRESENCE_STALE_MS = 90000;
 const STORAGE_KEY_PREFIX = "chat_seen_timestamps";
+const MAX_CHAT_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 
 const getStableParticipants = (firstUserId, secondUserId) =>
   [firstUserId, secondUserId].sort();
@@ -50,6 +55,73 @@ const getDisplayName = (profile = {}) =>
   profile.displayName ||
   profile.email?.split("@")[0] ||
   "Unknown User";
+
+const sanitizeAttachmentFileName = (fileName = "attachment") =>
+  fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+const isImageAttachment = (attachment = {}) =>
+  (attachment.mimeType || "").startsWith("image/");
+
+const formatAttachmentSize = (size = 0) => {
+  if (!size) {
+    return "";
+  }
+
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getReadStateTimestampMs = (conversation = {}, participantId = "") =>
+  getTimestampMs(conversation?.readStates?.[participantId]);
+
+const getDeletedMessageSummaryText = (message = {}) => {
+  if (message.deletedByRole === "admin" && message.deletedBy !== message.senderId) {
+    return "Admin deleted this message";
+  }
+
+  if (message.deletedByName) {
+    return `${message.deletedByName} deleted this message`;
+  }
+
+  return "User deleted this message";
+};
+
+const getDeletedMessageText = (message = {}, viewerId = "") => {
+  if (!message?.deletedAt) {
+    return "";
+  }
+
+  if (viewerId && message.deletedBy === viewerId) {
+    return "You deleted this message";
+  }
+
+  return getDeletedMessageSummaryText(message);
+};
+
+const getMessageReplyPreviewText = (message = {}) => {
+  if (message.deletedAt) {
+    return "Deleted message";
+  }
+
+  const trimmedText = `${message.text || ""}`.trim();
+
+  if (trimmedText) {
+    return trimmedText;
+  }
+
+  if (message.attachment) {
+    return isImageAttachment(message.attachment) ? "Photo" : "Attachment";
+  }
+
+  return "Message";
+};
 
 const getTimestampMs = (value) => {
   if (!value) return 0;
@@ -240,8 +312,11 @@ const ChatWidget = () => {
   const [actionMenuMessageId, setActionMenuMessageId] = useState(null);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [messageActionInFlightId, setMessageActionInFlightId] = useState(null);
+  const [replyingToMessage, setReplyingToMessage] = useState(null);
   const [isMobileViewport, setIsMobileViewport] = useState(isMobileChatViewport);
   const [sidebarTab, setSidebarTab] = useState("chats");
+  const [selectedAttachment, setSelectedAttachment] = useState(null);
+  const [activeImagePreview, setActiveImagePreview] = useState(null);
   const messagesEndRef = useRef(null);
   const longPressTimerRef = useRef(null);
   const notifiedConversationKeysRef = useRef(new Set());
@@ -250,6 +325,8 @@ const ChatWidget = () => {
   const socketRef = useRef(null);
   const isOpenRef = useRef(false);
   const activeConversationIdRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [seenConversationTimestamps, setSeenConversationTimestamps] = useState(() =>
     loadSeenConversationTimestamps(user?.uid)
   );
@@ -504,45 +581,6 @@ const ChatWidget = () => {
     ? firestore.collection("chatConversations").doc(activeConversationId)
     : null;
 
-  const syncConversationSummary = async () => {
-    if (!conversationRef) {
-      return;
-    }
-
-    const latestMessageSnapshot = await conversationRef
-      .collection("messages")
-      .orderBy("createdAt", "desc")
-      .limit(1)
-      .get();
-
-    if (latestMessageSnapshot.empty) {
-      await conversationRef.set(
-        {
-          lastMessageText: "",
-          lastMessageSenderId: "",
-          updatedAt:
-            activeConversation?.createdAt ||
-            firebase.firestore.FieldValue.serverTimestamp()
-        },
-        { merge: true }
-      );
-      return;
-    }
-
-    const latestMessage = latestMessageSnapshot.docs[0].data();
-
-    await conversationRef.set(
-      {
-        lastMessageText: latestMessage.text || "",
-        lastMessageSenderId: latestMessage.senderId || "",
-        updatedAt:
-          latestMessage.createdAt ||
-          firebase.firestore.FieldValue.serverTimestamp()
-      },
-      { merge: true }
-    );
-  };
-
   useEffect(() => {
     isOpenRef.current = isOpen;
     activeConversationIdRef.current = activeConversationId;
@@ -550,9 +588,17 @@ const ChatWidget = () => {
 
   useEffect(() => {
     setEditingMessageId(null);
+    setReplyingToMessage(null);
     setDraftMessage("");
     setMessageActionInFlightId(null);
     setActionMenuMessageId(null);
+    setSelectedAttachment((currentAttachment) => {
+      if (currentAttachment?.previewUrl) {
+        window.URL.revokeObjectURL(currentAttachment.previewUrl);
+      }
+
+      return null;
+    });
   }, [activeConversationId]);
 
   useEffect(() => {
@@ -619,12 +665,124 @@ const ChatWidget = () => {
   }, [messages, isOpen, activeConversationId]);
 
   useEffect(() => {
-    if (!activeConversationId || !isOpen || !activeConversation?.updatedAt) {
-      return;
+    if (!activeConversationId || !isOpen || !user?.uid) {
+      return undefined;
     }
 
-    markConversationAsRead(activeConversationId, activeConversation.updatedAt);
-  }, [activeConversation, activeConversationId, isOpen]);
+    let isSubscribed = true;
+
+    const syncActiveConversationReadState = () => {
+      const latestMessageTimestamp =
+        messages[messages.length - 1]?.createdAt || activeConversation?.updatedAt;
+      const timestampMs = getTimestampMs(latestMessageTimestamp);
+      const remoteReadTimestampMs = getReadStateTimestampMs(
+        activeConversation,
+        user.uid
+      );
+
+      if (!timestampMs) {
+        return;
+      }
+
+      markConversationAsRead(activeConversationId, latestMessageTimestamp);
+
+      if (remoteReadTimestampMs >= timestampMs) {
+        return;
+      }
+
+      firestore
+        .collection("chatConversations")
+        .doc(activeConversationId)
+        .set(
+          {
+            readStates: {
+              [user.uid]: firebase.firestore.Timestamp.fromMillis(timestampMs)
+            }
+          },
+          { merge: true }
+        )
+        .catch((error) => {
+          if (!isSubscribed) {
+            return;
+          }
+
+          console.warn("Failed to sync chat read state:", error);
+        });
+    };
+
+    syncActiveConversationReadState();
+
+    const handleReadSyncVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      syncActiveConversationReadState();
+    };
+
+    window.addEventListener("focus", handleReadSyncVisibility);
+    document.addEventListener("visibilitychange", handleReadSyncVisibility);
+
+    return () => {
+      isSubscribed = false;
+      window.removeEventListener("focus", handleReadSyncVisibility);
+      document.removeEventListener("visibilitychange", handleReadSyncVisibility);
+    };
+  }, [activeConversation, activeConversationId, isOpen, messages, user?.uid]);
+
+  useEffect(() => {
+    if (!activeConversationId || !isOpen || !user?.uid || messages.length === 0) {
+      return undefined;
+    }
+
+    const syncMessageReadReceipts = () => {
+      const unreadIncomingMessages = messages.filter(
+        (message) =>
+          message.senderId &&
+          message.senderId !== user.uid &&
+          message.readBy !== user.uid
+      );
+
+      if (unreadIncomingMessages.length === 0) {
+        return;
+      }
+
+      const batch = firestore.batch();
+      const messagesCollectionRef = firestore
+        .collection("chatConversations")
+        .doc(activeConversationId)
+        .collection("messages");
+
+      unreadIncomingMessages.forEach((message) => {
+        batch.update(messagesCollectionRef.doc(message.id), {
+          readAt: firebase.firestore.FieldValue.serverTimestamp(),
+          readBy: user.uid
+        });
+      });
+
+      batch.commit().catch((error) => {
+        console.warn("Failed to sync chat message read receipts:", error);
+      });
+    };
+
+    syncMessageReadReceipts();
+
+    const handleReceiptSyncVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      syncMessageReadReceipts();
+    };
+
+    window.addEventListener("focus", handleReceiptSyncVisibility);
+    document.addEventListener("visibilitychange", handleReceiptSyncVisibility);
+
+    return () => {
+      window.removeEventListener("focus", handleReceiptSyncVisibility);
+      document.removeEventListener("visibilitychange", handleReceiptSyncVisibility);
+    };
+  }, [activeConversationId, isOpen, messages, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid || !hasLoadedConversationsRef.current || enrichedConversations.length === 0) {
@@ -654,10 +812,6 @@ const ChatWidget = () => {
       }
 
       notifiedConversationKeysRef.current.add(notificationKey);
-
-      toast.info(`New message from ${getDisplayName(conversation.otherUserProfile)}`, {
-        toastId: notificationKey
-      });
 
       showBrowserNotification({
         title: getDisplayName(conversation.otherUserProfile),
@@ -734,10 +888,6 @@ const ChatWidget = () => {
 
           notifiedConversationKeysRef.current.add(notificationKey);
 
-          toast.info(`New message from ${senderName || "Someone"}`, {
-            toastId: notificationKey
-          });
-
           showBrowserNotification({
             title: senderName || "New chat message",
             body: text || "You have a new message.",
@@ -799,6 +949,29 @@ const ChatWidget = () => {
     return filteredContacts.filter((contact) => !recentContactIdSet.has(contact.id));
   }, [filteredContacts, recentContactIdSet]);
 
+  const getOwnMessageStatus = (message) => {
+    const messageTimestampMs = getTimestampMs(message?.createdAt);
+    const directReadTimestampMs = getTimestampMs(message?.readAt);
+    const otherParticipantReadTimestampMs = getReadStateTimestampMs(
+      activeConversation,
+      activeContactId
+    );
+
+    if (directReadTimestampMs && message?.readBy === activeContactId) {
+      return "read";
+    }
+
+    if (messageTimestampMs && otherParticipantReadTimestampMs >= messageTimestampMs) {
+      return "read";
+    }
+
+    if (isUserOnline(activeContact)) {
+      return "delivered";
+    }
+
+    return "sent";
+  };
+
   const openConversation = async (contactId) => {
     try {
       await requestBrowserNotificationPermission();
@@ -811,6 +984,8 @@ const ChatWidget = () => {
   };
 
   const startEditingMessage = (message) => {
+    clearSelectedAttachment();
+    setReplyingToMessage(null);
     setActionMenuMessageId(null);
     setEditingMessageId(message.id);
     setDraftMessage(message.text || "");
@@ -821,11 +996,103 @@ const ChatWidget = () => {
     setDraftMessage("");
   };
 
+  const startReplyingToMessage = (message) => {
+    if (!message?.id || message.deletedAt) {
+      return;
+    }
+
+    setEditingMessageId(null);
+    setActionMenuMessageId(null);
+    setReplyingToMessage({
+      messageId: message.id,
+      senderId: message.senderId || "",
+      senderName:
+        message.senderId === user.uid
+          ? user.name || user.displayName || user.email || "You"
+          : message.senderName || getDisplayName(activeContact),
+      previewText: getMessageReplyPreviewText(message)
+    });
+  };
+
+  const cancelReplyingToMessage = () => {
+    setReplyingToMessage(null);
+  };
+
+  const clearSelectedAttachment = () => {
+    setSelectedAttachment((currentAttachment) => {
+      if (currentAttachment?.previewUrl) {
+        window.URL.revokeObjectURL(currentAttachment.previewUrl);
+      }
+
+      return null;
+    });
+  };
+
+  const closeImagePreview = () => {
+    setActiveImagePreview(null);
+  };
+
+  const handleAttachmentSelection = (event, preferredCategory) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    if (file.size > MAX_CHAT_ATTACHMENT_BYTES) {
+      toast.error("Attachment must be smaller than 15 MB.");
+      return;
+    }
+
+    const category =
+      preferredCategory === "image" || file.type.startsWith("image/")
+        ? "image"
+        : "file";
+
+    setSelectedAttachment((currentAttachment) => {
+      if (currentAttachment?.previewUrl) {
+        window.URL.revokeObjectURL(currentAttachment.previewUrl);
+      }
+
+      return {
+        file,
+        category,
+        previewUrl: category === "image" ? window.URL.createObjectURL(file) : ""
+      };
+    });
+  };
+
+  const uploadChatAttachment = async (conversationId, messageId, attachment) => {
+    const file = attachment?.file;
+
+    if (!file) {
+      return null;
+    }
+
+    const storagePath = `chat-attachments/${conversationId}/${messageId}/${Date.now()}-${sanitizeAttachmentFileName(file.name)}`;
+    const attachmentRef = storage.ref(storagePath);
+    const uploadTask = attachmentRef.put(file, {
+      contentType: file.type || "application/octet-stream"
+    });
+
+    await uploadTask;
+
+    return {
+      category: attachment.category,
+      downloadUrl: await attachmentRef.getDownloadURL(),
+      mimeType: file.type || "application/octet-stream",
+      name: file.name,
+      size: file.size,
+      storagePath
+    };
+  };
+
   const saveEditedMessage = async () => {
     const trimmedMessage = draftMessage.trim();
     const editingMessage = messages.find((message) => message.id === editingMessageId);
 
-    if (!conversationRef || !editingMessage?.id || !trimmedMessage) {
+    if (!conversationRef || !editingMessage?.id || !trimmedMessage || editingMessage.deletedAt) {
       return;
     }
 
@@ -877,7 +1144,7 @@ const ChatWidget = () => {
   };
 
   const deleteMessage = async (message) => {
-    if (!conversationRef || !message?.id) {
+    if (!conversationRef || !message?.id || message.deletedAt) {
       return;
     }
 
@@ -915,12 +1182,57 @@ const ChatWidget = () => {
           throw apiError;
         }
 
-        await conversationRef.collection("messages").doc(message.id).delete();
+        const deletedMessagePayload = {
+          text: "",
+          attachment: null,
+          deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          deletedBy: user.uid,
+          deletedByName:
+            user.role === "admin" && message.senderId !== user.uid
+              ? "Admin"
+              : user.name || user.displayName || user.email || "User",
+          deletedByRole: user.role || "user"
+        };
+
+        await conversationRef.collection("messages").doc(message.id).update(
+          deletedMessagePayload
+        );
+
+        if (message.attachment?.storagePath) {
+          storage.ref(message.attachment.storagePath).delete().catch(() => {});
+        }
+
+        if (messages[messages.length - 1]?.id === message.id) {
+          await conversationRef.set(
+            {
+              lastMessageText: getDeletedMessageSummaryText({
+                ...message,
+                ...deletedMessagePayload
+              }),
+              lastMessageSenderId: message.senderId || user.uid,
+              updatedAt:
+                message.createdAt ||
+                firebase.firestore.FieldValue.serverTimestamp()
+            },
+            { merge: true }
+          );
+        }
       }
 
       if (editingMessageId === message.id) {
         setEditingMessageId(null);
         setDraftMessage("");
+      }
+
+      if (replyingToMessage?.messageId === message.id) {
+        setReplyingToMessage((currentReply) =>
+          currentReply
+            ? {
+                ...currentReply,
+                previewText: "Deleted message"
+              }
+            : null
+        );
       }
     } catch (error) {
       console.error("Failed to delete chat message:", error);
@@ -979,8 +1291,9 @@ const ChatWidget = () => {
 
   const sendMessage = async () => {
     const trimmedMessage = draftMessage.trim();
+    const hasAttachment = Boolean(selectedAttachment?.file);
 
-    if (!trimmedMessage || !activeContactId || !user?.uid || isSending) {
+    if ((!trimmedMessage && !hasAttachment) || !activeContactId || !user?.uid || isSending) {
       return;
     }
 
@@ -999,6 +1312,7 @@ const ChatWidget = () => {
     const messageRef = sendConversationRef.collection("messages").doc();
     const batch = firestore.batch();
     const activeRecipient = usersById[activeContactId];
+    let attachmentPayload = null;
 
     if (!activeRecipient) {
       return;
@@ -1007,6 +1321,19 @@ const ChatWidget = () => {
     setIsSending(true);
 
     try {
+      if (hasAttachment) {
+        attachmentPayload = await uploadChatAttachment(
+          conversationId,
+          messageRef.id,
+          selectedAttachment
+        );
+      }
+
+      const lastMessagePreview =
+        trimmedMessage ||
+        attachmentPayload?.name ||
+        (attachmentPayload?.category === "image" ? "Photo" : "Attachment");
+
       const baseConversationPayload = {
         participants,
         participantProfiles: {
@@ -1025,7 +1352,7 @@ const ChatWidget = () => {
             country: activeRecipient.country || ""
           }
         },
-        lastMessageText: trimmedMessage,
+        lastMessageText: lastMessagePreview,
         lastMessageSenderId: user.uid,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
@@ -1037,16 +1364,34 @@ const ChatWidget = () => {
       batch.set(sendConversationRef, baseConversationPayload, { merge: true });
       batch.set(messageRef, {
         text: trimmedMessage,
+        attachment: attachmentPayload,
+        replyTo: replyingToMessage,
         senderId: user.uid,
         senderName: user.name || user.displayName || user.email || "You",
         recipientId: activeContactId,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      batch.set(
+        sendConversationRef,
+        {
+          readStates: {
+            [user.uid]: firebase.firestore.FieldValue.serverTimestamp()
+          }
+        },
+        { merge: true }
+      );
 
       await batch.commit();
       setDraftMessage("");
+      setReplyingToMessage(null);
+      clearSelectedAttachment();
     } catch (error) {
       console.error("Failed to send chat message:", error);
+      toast.error("Failed to send message.");
+
+      if (attachmentPayload?.storagePath) {
+        storage.ref(attachmentPayload.storagePath).delete().catch(() => {});
+      }
     } finally {
       setIsSending(false);
     }
@@ -1269,9 +1614,13 @@ const ChatWidget = () => {
                     ) : (
                       messages.map((message) => {
                         const isOwnMessage = message.senderId === user.uid;
+                        const isDeletedMessage = Boolean(message.deletedAt);
                         const isMessageActionPending =
                           messageActionInFlightId === message.id;
                         const isActionMenuOpen = actionMenuMessageId === message.id;
+                        const ownMessageStatus = isOwnMessage
+                          ? getOwnMessageStatus(message)
+                          : null;
 
                         return (
                           <div
@@ -1282,46 +1631,131 @@ const ChatWidget = () => {
                               className={`chat-bubble ${isOwnMessage ? "mine" : "theirs"} ${isActionMenuOpen ? "menu-open" : ""}`}
                               data-chat-bubble-id={message.id}
                               onPointerDown={
-                                isOwnMessage && !editingMessageId
+                                !editingMessageId && !isDeletedMessage
                                   ? () => handleMessagePointerDown(message.id)
                                   : undefined
                               }
                               onPointerUp={
-                                isOwnMessage && !editingMessageId
+                                !editingMessageId && !isDeletedMessage
                                   ? handleMessagePointerUp
                                   : undefined
                               }
                               onPointerLeave={
-                                isOwnMessage && !editingMessageId
+                                !editingMessageId && !isDeletedMessage
                                   ? clearLongPressTimer
                                   : undefined
                               }
                               onPointerCancel={
-                                isOwnMessage && !editingMessageId
+                                !editingMessageId && !isDeletedMessage
                                   ? clearLongPressTimer
                                   : undefined
                               }
                               onContextMenu={
-                                isOwnMessage && !editingMessageId
+                                !editingMessageId && !isDeletedMessage
                                   ? (event) => handleMessageContextMenu(event, message.id)
                                   : undefined
                               }
                               onKeyDown={
-                                isOwnMessage && !editingMessageId
+                                !editingMessageId && !isDeletedMessage
                                   ? (event) => handleMessageKeyDown(event, message.id)
                                   : undefined
                               }
-                              tabIndex={isOwnMessage && !editingMessageId ? 0 : undefined}
+                              tabIndex={
+                                !editingMessageId && !isDeletedMessage
+                                  ? 0
+                                  : undefined
+                              }
                             >
-                              <p>{message.text}</p>
+                              {message.replyTo?.messageId ? (
+                                <div className="chat-reply-snippet">
+                                  <span className="chat-reply-snippet-label">
+                                    {message.replyTo.senderId === user.uid
+                                      ? "You"
+                                      : message.replyTo.senderName || "User"}
+                                  </span>
+                                  <span className="chat-reply-snippet-text">
+                                    {message.replyTo.previewText || "Message"}
+                                  </span>
+                                </div>
+                              ) : null}
+                              {!isDeletedMessage &&
+                                message.attachment &&
+                                (isImageAttachment(message.attachment) ? (
+                                  <button
+                                    type="button"
+                                    className="chat-attachment image"
+                                    onClick={() =>
+                                      setActiveImagePreview({
+                                        downloadUrl: message.attachment.downloadUrl,
+                                        name: message.attachment.name || "Chat image"
+                                      })
+                                    }
+                                  >
+                                    <img
+                                      src={message.attachment.downloadUrl}
+                                      alt={message.attachment.name || "Chat attachment"}
+                                    />
+                                  </button>
+                                ) : (
+                                  <a
+                                    className="chat-attachment file"
+                                    href={message.attachment.downloadUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    <span className="chat-attachment-icon">
+                                      <FontAwesomeIcon icon={faFileLines} />
+                                    </span>
+                                    <span className="chat-attachment-meta">
+                                      <strong>{message.attachment.name || "Attachment"}</strong>
+                                      <small>
+                                        {[formatAttachmentSize(message.attachment.size), message.attachment.mimeType]
+                                          .filter(Boolean)
+                                          .join(" / ")}
+                                      </small>
+                                    </span>
+                                  </a>
+                                ))}
+                              {isDeletedMessage ? (
+                                <p className="chat-deleted-message">
+                                  {getDeletedMessageText(message, user.uid)}
+                                </p>
+                              ) : message.text ? (
+                                <p>{message.text}</p>
+                              ) : null}
                               <div className="chat-bubble-footer">
                                 <small>
                                   {formatMessageTime(message.createdAt)}
-                                  {message.editedAt ? " / edited" : ""}
+                                  {!isDeletedMessage && message.editedAt ? " / edited" : ""}
                                 </small>
+                                {ownMessageStatus && (
+                                  <span
+                                    className={`chat-message-status ${ownMessageStatus} ${
+                                      ownMessageStatus === "sent" ? "single" : "double"
+                                    }`}
+                                    aria-label={ownMessageStatus}
+                                    title={ownMessageStatus}
+                                  >
+                                    <FontAwesomeIcon icon={faCheck} />
+                                    {ownMessageStatus !== "sent" ? (
+                                      <FontAwesomeIcon icon={faCheck} />
+                                    ) : null}
+                                  </span>
+                                )}
                               </div>
-                              {isOwnMessage && isActionMenuOpen && (
+                              {isActionMenuOpen && !isDeletedMessage && (
                                 <div className="chat-bubble-actions-menu" role="menu">
+                                  <button
+                                    type="button"
+                                    className="chat-menu-action"
+                                    onClick={() => startReplyingToMessage(message)}
+                                    disabled={isMessageActionPending}
+                                  >
+                                    <FontAwesomeIcon icon={faReply} />
+                                    Reply
+                                  </button>
+                                  {isOwnMessage ? (
+                                    <>
                                   <button
                                     type="button"
                                     className="chat-menu-action"
@@ -1340,6 +1774,8 @@ const ChatWidget = () => {
                                     <FontAwesomeIcon icon={faTrashCan} />
                                     Delete
                                   </button>
+                                    </>
+                                  ) : null}
                                 </div>
                               )}
                             </div>
@@ -1350,7 +1786,7 @@ const ChatWidget = () => {
                     <div ref={messagesEndRef} />
                   </div>
 
-                  <div className={`chat-thread-composer ${editingMessageId ? "editing" : ""}`}>
+                  <div className={`chat-thread-composer ${editingMessageId || replyingToMessage ? "editing" : ""}`}>
                     {editingMessageId && (
                       <div className="chat-composer-editing">
                         <div className="chat-composer-editing-copy">
@@ -1366,6 +1802,92 @@ const ChatWidget = () => {
                           <FontAwesomeIcon icon={faXmark} />
                         </button>
                       </div>
+                    )}
+                    {replyingToMessage && !editingMessageId && (
+                      <div className="chat-composer-replying">
+                        <div className="chat-composer-editing-copy">
+                          <span className="chat-composer-reply-label">
+                            {replyingToMessage.senderId === user.uid
+                              ? "You"
+                              : replyingToMessage.senderName || "User"}
+                          </span>
+                          <span className="chat-composer-reply-text">
+                            {replyingToMessage.previewText || "Message"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="chat-composer-cancel"
+                          onClick={cancelReplyingToMessage}
+                          aria-label="Cancel reply"
+                        >
+                          <FontAwesomeIcon icon={faXmark} />
+                        </button>
+                      </div>
+                    )}
+                    {selectedAttachment && !editingMessageId && (
+                      <div className="chat-composer-attachment">
+                        {selectedAttachment.category === "image" && selectedAttachment.previewUrl ? (
+                          <img
+                            className="chat-composer-attachment-preview"
+                            src={selectedAttachment.previewUrl}
+                            alt={selectedAttachment.file.name}
+                          />
+                        ) : (
+                          <span className="chat-composer-attachment-icon">
+                            <FontAwesomeIcon icon={faFileLines} />
+                          </span>
+                        )}
+                        <div className="chat-composer-attachment-copy">
+                          <span className="chat-composer-attachment-name">
+                            {selectedAttachment.file.name}
+                          </span>
+                          <span className="chat-composer-attachment-size">
+                            {formatAttachmentSize(selectedAttachment.file.size)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="chat-composer-cancel"
+                          onClick={clearSelectedAttachment}
+                          aria-label="Remove attachment"
+                        >
+                          <FontAwesomeIcon icon={faXmark} />
+                        </button>
+                      </div>
+                    )}
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="chat-file-input"
+                      onChange={(event) => handleAttachmentSelection(event, "image")}
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="chat-file-input"
+                      onChange={(event) => handleAttachmentSelection(event, "file")}
+                    />
+                    {!editingMessageId && (
+                      <>
+                        <button
+                          type="button"
+                          className="chat-attach-btn"
+                          onClick={() => imageInputRef.current?.click()}
+                          aria-label="Send image"
+                        >
+                          <FontAwesomeIcon icon={faImage} />
+                        </button>
+                        <button
+                          type="button"
+                          className="chat-attach-btn"
+                          onClick={() => fileInputRef.current?.click()}
+                          aria-label="Send file"
+                        >
+                          <FontAwesomeIcon icon={faPaperclip} />
+                        </button>
+                      </>
                     )}
                     <textarea
                       value={draftMessage}
@@ -1383,7 +1905,7 @@ const ChatWidget = () => {
                       type="button"
                       className="chat-send-btn"
                       onClick={sendMessage}
-                      disabled={!draftMessage.trim() || isSending}
+                      disabled={(!draftMessage.trim() && !selectedAttachment) || isSending}
                       aria-label={editingMessageId ? "Save edited message" : "Send message"}
                     >
                       <FontAwesomeIcon icon={editingMessageId ? faCheck : faPaperPlane} />
@@ -1398,7 +1920,32 @@ const ChatWidget = () => {
               )}
             </div>
           </div>
-        </>
+        </> 
+      )}
+
+      {activeImagePreview && (
+        <div className="chat-image-viewer" role="dialog" aria-label="Image preview">
+          <button
+            type="button"
+            className="chat-image-viewer-backdrop"
+            onClick={closeImagePreview}
+            aria-label="Close image preview"
+          />
+          <div className="chat-image-viewer-panel">
+            <button
+              type="button"
+              className="chat-image-viewer-close"
+              onClick={closeImagePreview}
+              aria-label="Close image preview"
+            >
+              <FontAwesomeIcon icon={faXmark} />
+            </button>
+            <img
+              src={activeImagePreview.downloadUrl}
+              alt={activeImagePreview.name}
+            />
+          </div>
+        </div>
       )}
 
       {!isOpen && (

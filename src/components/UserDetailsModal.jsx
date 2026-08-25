@@ -105,7 +105,7 @@ const UserDetailsModal = () => {
                 <h4 className="user-name" style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: '0 0 5px' }}>
                   {(userData && userData.name) || (user && user.displayName) || "Influencer Account"}
                 </h4>
-                <p className="user-email" style={{ color: '#cccccc', fontSize: '14px', margin: '0 0 15px' }}>
+                <p className="user-email" style={{ color: '#9f1414', fontSize: '14px', margin: '0 0 15px' }}>
                   {(user && user.email) || "Email Not Available"}
                 </p>
 

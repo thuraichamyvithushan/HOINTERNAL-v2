@@ -311,15 +311,30 @@ const syncChatConversationSummary = async (conversationRef) => {
     }
 
     const latestMessage = latestMessageSnapshot.docs[0].data();
+    const lastMessageText = latestMessage.deletedAt
+        ? getDeletedMessageSummaryText(latestMessage)
+        : latestMessage.text || '';
 
     await conversationRef.set(
         {
-            lastMessageText: latestMessage.text || '',
+            lastMessageText,
             lastMessageSenderId: latestMessage.senderId || '',
             updatedAt: latestMessage.createdAt || admin.firestore.FieldValue.serverTimestamp()
         },
         { merge: true }
     );
+};
+
+const getDeletedMessageSummaryText = (messageData = {}) => {
+    if (messageData.deletedByRole === 'admin' && messageData.deletedBy !== messageData.senderId) {
+        return 'Admin deleted this message';
+    }
+
+    if (messageData.deletedByName) {
+        return `${messageData.deletedByName} deleted this message`;
+    }
+
+    return 'User deleted this message';
 };
 
 const resolveMessageOwnerId = (conversationData = {}, messageData = {}) => {
@@ -462,6 +477,10 @@ app.patch('/api/chat/conversations/:conversationId/messages/:messageId', async (
             return res.status(403).json({ error: 'You cannot edit this message' });
         }
 
+        if (messageData.deletedAt) {
+            return res.status(400).json({ error: 'Deleted messages cannot be edited' });
+        }
+
         const updatePayload = {
             text: nextText,
             editedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -518,7 +537,33 @@ app.delete('/api/chat/conversations/:conversationId/messages/:messageId', async 
             return res.status(403).json({ error: 'You cannot delete this message' });
         }
 
-        await messageRef.delete();
+        if (messageData.deletedAt) {
+            return res.status(200).json({ success: true });
+        }
+
+        if (messageData.attachment?.storagePath) {
+            await bucket.file(messageData.attachment.storagePath).delete({ ignoreNotFound: true }).catch((error) => {
+                console.warn('Failed to delete chat attachment from storage:', error.message);
+            });
+        }
+
+        const deletePayload = {
+            text: '',
+            attachment: null,
+            deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+            deletedBy: requester.uid,
+            deletedByName:
+                requester.role === 'admin' && requester.uid !== ownerId
+                    ? 'Admin'
+                    : requester.name || requester.email || 'User',
+            deletedByRole: requester.role || 'user'
+        };
+
+        if (!messageData.senderId && ownerId) {
+            deletePayload.senderId = ownerId;
+        }
+
+        await messageRef.update(deletePayload);
         await syncChatConversationSummary(conversationRef);
 
         res.status(200).json({ success: true });

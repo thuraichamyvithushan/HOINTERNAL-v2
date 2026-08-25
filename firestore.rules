@@ -57,11 +57,32 @@ service cloud.firestore {
         );
     }
 
+    function canMarkMessageAsRead(messageData) {
+      return isSignedIn()
+        && (
+          messageData.recipientId == request.auth.uid
+          || isAdmin()
+        );
+    }
+
     function validMessageUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
         "text",
-        "editedAt"
+        "editedAt",
+        "attachment",
+        "deletedAt",
+        "deletedBy",
+        "deletedByName",
+        "deletedByRole"
       ]);
+    }
+
+    function validMessageReadReceiptUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "readAt",
+        "readBy"
+      ])
+      && request.resource.data.readBy == request.auth.uid;
     }
 
     match /users/{userId} {
@@ -98,8 +119,10 @@ service cloud.firestore {
           && request.resource.data.recipientId in getAfter(/databases/$(database)/documents/chatConversations/$(conversationId)).data.participants;
 
         allow update: if canReadMessageConversation(conversationId)
-          && canManageMessage(resource.data)
-          && validMessageUpdate();
+          && (
+            (canManageMessage(resource.data) && validMessageUpdate())
+            || (canMarkMessageAsRead(resource.data) && validMessageReadReceiptUpdate())
+          );
 
         allow delete: if canReadMessageConversation(conversationId)
           && canManageMessage(resource.data);

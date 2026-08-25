@@ -143,7 +143,7 @@
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: #ffffff;
+  color: #ffffff !important;
   letter-spacing: 0.025em;
   transition: all 0.3s ease;
 }
