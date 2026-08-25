@@ -5,6 +5,8 @@ const cors = require('cors');
 const multer = require('multer');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
+const http = require('http');
+const { Server } = require('socket.io');
 
 // Initialize Firebase Admin SDK
 let credential;
@@ -34,6 +36,8 @@ const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
 const app = express();
+const supportsSocketServer = !process.env.VERCEL;
+const httpServer = supportsSocketServer ? http.createServer(app) : null;
 
 const allowedOrigins = [
     'http://localhost:3000',
@@ -44,13 +48,133 @@ const allowedOrigins = [
     process.env.ALLOWED_ORIGIN
 ].filter(Boolean);
 
+const isAllowedOrigin = (origin) => {
+    if (!origin) {
+        return true;
+    }
+
+    return allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*');
+};
+
+const socketCorsOrigin = (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+    }
+
+    console.log("Socket.IO CORS blocked origin:", origin);
+    callback(null, true);
+};
+
+const getSocketUserRoom = (uid) => `user:${uid}`;
+
+const getTimestampMs = (value) => {
+    if (!value) {
+        return Date.now();
+    }
+
+    if (typeof value.toMillis === 'function') {
+        return value.toMillis();
+    }
+
+    if (value.seconds) {
+        return value.seconds * 1000;
+    }
+
+    const parsedValue = new Date(value).getTime();
+    return Number.isNaN(parsedValue) ? Date.now() : parsedValue;
+};
+
+let io = null;
+
+if (supportsSocketServer) {
+    io = new Server(httpServer, {
+        cors: {
+            origin: socketCorsOrigin,
+            methods: ['GET', 'POST'],
+            credentials: true
+        },
+        transports: ['websocket', 'polling']
+    });
+
+    io.use(async (socket, next) => {
+        const token = socket.handshake.auth?.token;
+
+        if (!token) {
+            next(new Error('Authentication required'));
+            return;
+        }
+
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(token);
+            socket.user = { uid: decodedToken.uid };
+            next();
+        } catch (error) {
+            console.error('Socket authentication failed:', error.message);
+            next(new Error('Unauthorized'));
+        }
+    });
+
+    io.on('connection', (socket) => {
+        const uid = socket.user?.uid;
+
+        if (!uid) {
+            socket.disconnect(true);
+            return;
+        }
+
+        socket.join(getSocketUserRoom(uid));
+        socket.emit('chat:socket-ready', { uid });
+
+        socket.on('disconnect', () => {
+            socket.leave(getSocketUserRoom(uid));
+        });
+    });
+
+    let hasProcessedInitialMessageSnapshot = false;
+
+    db.collectionGroup('messages').onSnapshot(
+        (snapshot) => {
+            if (!hasProcessedInitialMessageSnapshot) {
+                hasProcessedInitialMessageSnapshot = true;
+                return;
+            }
+
+            snapshot.docChanges().forEach((change) => {
+                if (change.type !== 'added') {
+                    return;
+                }
+
+                const message = change.doc.data();
+                const recipientId = message.recipientId;
+                const conversationId = change.doc.ref.parent.parent?.id || null;
+
+                if (!recipientId) {
+                    return;
+                }
+
+                io.to(getSocketUserRoom(recipientId)).emit('chat:new-message', {
+                    conversationId,
+                    messageId: change.doc.id,
+                    senderId: message.senderId || null,
+                    senderName: message.senderName || 'Someone',
+                    recipientId,
+                    text: message.text || '',
+                    createdAtMs: getTimestampMs(message.createdAt)
+                });
+            });
+        },
+        (error) => {
+            console.error('Chat notification snapshot listener failed:', error);
+        }
+    );
+}
+
 // 1. IMPORTANT: CORS must be the absolute FIRST middleware
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+        if (isAllowedOrigin(origin)) {
             callback(null, true);
         } else {
             console.log("CORS blocked origin:", origin);
@@ -141,6 +265,85 @@ const requireAdminRequest = async (req, res) => {
     }
 };
 
+const requireAuthenticatedRequest = async (req, res) => {
+    const token = getBearerToken(req);
+
+    if (!token) {
+        res.status(401).json({ error: 'Authentication required' });
+        return null;
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+        const storedUserData = userDoc.exists ? userDoc.data() || {} : {};
+
+        return {
+            uid: decodedToken.uid,
+            role: storedUserData.role || decodedToken.role || null,
+            name: storedUserData.name || decodedToken.name || '',
+            email: storedUserData.email || decodedToken.email || ''
+        };
+    } catch (error) {
+        console.error('User auth verification failed:', error);
+        res.status(401).json({ error: 'Invalid or expired authentication token' });
+        return null;
+    }
+};
+
+const syncChatConversationSummary = async (conversationRef) => {
+    const latestMessageSnapshot = await conversationRef
+        .collection('messages')
+        .orderBy('createdAt', 'desc')
+        .limit(1)
+        .get();
+
+    if (latestMessageSnapshot.empty) {
+        await conversationRef.set(
+            {
+                lastMessageText: '',
+                lastMessageSenderId: '',
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            },
+            { merge: true }
+        );
+        return;
+    }
+
+    const latestMessage = latestMessageSnapshot.docs[0].data();
+
+    await conversationRef.set(
+        {
+            lastMessageText: latestMessage.text || '',
+            lastMessageSenderId: latestMessage.senderId || '',
+            updatedAt: latestMessage.createdAt || admin.firestore.FieldValue.serverTimestamp()
+        },
+        { merge: true }
+    );
+};
+
+const resolveMessageOwnerId = (conversationData = {}, messageData = {}) => {
+    if (messageData.senderId) {
+        return messageData.senderId;
+    }
+
+    const participants = Array.isArray(conversationData.participants)
+        ? conversationData.participants
+        : [];
+
+    if (messageData.recipientId) {
+        const inferredSenderId = participants.find(
+            (participantId) => participantId !== messageData.recipientId
+        );
+
+        if (inferredSenderId) {
+            return inferredSenderId;
+        }
+    }
+
+    return null;
+};
+
 const fs = require('fs');
 const os = require('os');
 
@@ -213,6 +416,115 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
         console.error(error);
         console.error('-----------------------------------');
         res.status(500).json({ error: error.message, stack: error.stack });
+    }
+});
+
+app.patch('/api/chat/conversations/:conversationId/messages/:messageId', async (req, res) => {
+    const requester = await requireAuthenticatedRequest(req, res);
+
+    if (!requester) {
+        return;
+    }
+
+    try {
+        const { conversationId, messageId } = req.params;
+        const nextText = `${req.body?.text || ''}`.trim();
+
+        if (!nextText) {
+            return res.status(400).json({ error: 'Message text is required' });
+        }
+
+        const conversationRef = db.collection('chatConversations').doc(conversationId);
+        const messageRef = conversationRef.collection('messages').doc(messageId);
+        const [conversationSnapshot, messageSnapshot] = await Promise.all([
+            conversationRef.get(),
+            messageRef.get()
+        ]);
+
+        if (!conversationSnapshot.exists || !messageSnapshot.exists) {
+            return res.status(404).json({ error: 'Message not found' });
+        }
+
+        const conversationData = conversationSnapshot.data() || {};
+        const messageData = messageSnapshot.data() || {};
+        const participants = Array.isArray(conversationData.participants)
+            ? conversationData.participants
+            : [];
+
+        if (!participants.includes(requester.uid)) {
+            return res.status(403).json({ error: 'Conversation access denied' });
+        }
+
+        const ownerId = resolveMessageOwnerId(conversationData, messageData);
+        const canManageMessage = requester.role === 'admin' || ownerId === requester.uid;
+
+        if (!canManageMessage) {
+            return res.status(403).json({ error: 'You cannot edit this message' });
+        }
+
+        const updatePayload = {
+            text: nextText,
+            editedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (!messageData.senderId && ownerId) {
+            updatePayload.senderId = ownerId;
+        }
+
+        await messageRef.update(updatePayload);
+        await syncChatConversationSummary(conversationRef);
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Failed to edit chat message via API:', error);
+        res.status(500).json({ error: error.message || 'Failed to edit message' });
+    }
+});
+
+app.delete('/api/chat/conversations/:conversationId/messages/:messageId', async (req, res) => {
+    const requester = await requireAuthenticatedRequest(req, res);
+
+    if (!requester) {
+        return;
+    }
+
+    try {
+        const { conversationId, messageId } = req.params;
+        const conversationRef = db.collection('chatConversations').doc(conversationId);
+        const messageRef = conversationRef.collection('messages').doc(messageId);
+        const [conversationSnapshot, messageSnapshot] = await Promise.all([
+            conversationRef.get(),
+            messageRef.get()
+        ]);
+
+        if (!conversationSnapshot.exists || !messageSnapshot.exists) {
+            return res.status(404).json({ error: 'Message not found' });
+        }
+
+        const conversationData = conversationSnapshot.data() || {};
+        const messageData = messageSnapshot.data() || {};
+        const participants = Array.isArray(conversationData.participants)
+            ? conversationData.participants
+            : [];
+
+        if (!participants.includes(requester.uid)) {
+            return res.status(403).json({ error: 'Conversation access denied' });
+        }
+
+        const ownerId = resolveMessageOwnerId(conversationData, messageData);
+        const canManageMessage = requester.role === 'admin' || ownerId === requester.uid;
+
+        if (!canManageMessage) {
+            return res.status(403).json({ error: 'You cannot delete this message' });
+        }
+
+        await messageRef.delete();
+        await syncChatConversationSummary(conversationRef);
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Failed to delete chat message via API:', error);
+        res.status(500).json({ error: error.message || 'Failed to delete message' });
     }
 });
 
@@ -983,9 +1295,13 @@ app.patch('/api/invites/:inviteId/cancel', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Backend server listening on port ${PORT}`);
-});
+if (require.main === module) {
+    const server = httpServer || app;
+    server.listen(PORT, () => {
+        const socketState = supportsSocketServer ? ' with Socket.IO enabled' : '';
+        console.log(`Backend server listening on port ${PORT}${socketState}`);
+    });
+}
 
 // MUST EXPORT EXPRESS APP FOR VERCEL SERVERLESS FUNCTIONS
 module.exports = app;

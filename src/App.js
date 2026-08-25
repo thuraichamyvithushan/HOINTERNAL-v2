@@ -48,6 +48,7 @@ import AcceptInvite from "./components/AcceptInvite";
 import ScrollToTop from './components/ScrollToTop';
 import Accounts_hr_Page from './components/Accounts-hr-dashboard';
 import Accounts_hr_Page_nz from './components/Accounts-hr-dashboardNZ';
+import ChatWidget from './components/ChatWidget';
 
 function App() {
   const { user, loading } = useContext(AuthContext);
@@ -210,6 +211,7 @@ function App() {
 
 
                 </Routes>
+                <ChatWidget />
               </PrivateRoute>
             }
           />
