@@ -573,6 +573,47 @@ app.delete('/api/chat/conversations/:conversationId/messages/:messageId', async 
     }
 });
 
+app.post('/api/chat/conversations/:conversationId/clear', async (req, res) => {
+    const requester = await requireAuthenticatedRequest(req, res);
+
+    if (!requester) {
+        return;
+    }
+
+    try {
+        const { conversationId } = req.params;
+        const conversationRef = db.collection('chatConversations').doc(conversationId);
+        const conversationSnapshot = await conversationRef.get();
+
+        if (!conversationSnapshot.exists) {
+            return res.status(404).json({ error: 'Conversation not found' });
+        }
+
+        const conversationData = conversationSnapshot.data() || {};
+        const participants = Array.isArray(conversationData.participants)
+            ? conversationData.participants
+            : [];
+
+        if (!participants.includes(requester.uid)) {
+            return res.status(403).json({ error: 'Conversation access denied' });
+        }
+
+        await conversationRef.set(
+            {
+                clearStates: {
+                    [requester.uid]: admin.firestore.FieldValue.serverTimestamp()
+                }
+            },
+            { merge: true }
+        );
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Failed to clear chat conversation via API:', error);
+        res.status(500).json({ error: error.message || 'Failed to clear chat' });
+    }
+});
+
 app.post('/api/footage', async (req, res) => {
     try {
         const {

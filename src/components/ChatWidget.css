@@ -344,6 +344,66 @@
   font-size: 0.62rem;
 }
 
+.chat-thread-actions {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.chat-thread-menu-trigger {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #54656f;
+  cursor: pointer;
+  font-size: 0.76rem;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.chat-thread-menu-trigger:hover {
+  background: rgba(84, 101, 111, 0.12);
+  color: #111b21;
+}
+
+.chat-thread-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 132px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 36px rgba(17, 27, 33, 0.18);
+  z-index: 5;
+}
+
+.chat-thread-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #111b21;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.chat-thread-menu-item:hover {
+  background: rgba(17, 27, 33, 0.08);
+}
+
+.chat-thread-menu-item.danger {
+  color: #c0392b;
+}
+
 .chat-thread-messages {
   flex: 1;
   min-height: 0;

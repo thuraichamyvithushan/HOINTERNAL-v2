@@ -6,6 +6,7 @@ import {
   faCheck,
   faChevronLeft,
   faComments,
+  faEllipsisVertical,
   faFileLines,
   faImage,
   faMagnifyingGlass,
@@ -80,6 +81,9 @@ const formatAttachmentSize = (size = 0) => {
 
 const getReadStateTimestampMs = (conversation = {}, participantId = "") =>
   getTimestampMs(conversation?.readStates?.[participantId]);
+
+const getConversationClearedTimestampMs = (conversation = {}, participantId = "") =>
+  getTimestampMs(conversation?.clearStates?.[participantId]);
 
 const getDeletedMessageSummaryText = (message = {}) => {
   if (message.deletedByRole === "admin" && message.deletedBy !== message.senderId) {
@@ -310,6 +314,7 @@ const ChatWidget = () => {
   const [activeContactId, setActiveContactId] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [actionMenuMessageId, setActionMenuMessageId] = useState(null);
+  const [threadMenuOpen, setThreadMenuOpen] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [messageActionInFlightId, setMessageActionInFlightId] = useState(null);
   const [replyingToMessage, setReplyingToMessage] = useState(null);
@@ -533,6 +538,19 @@ const ChatWidget = () => {
   const activeConversation = enrichedConversations.find(
     (conversation) => conversation.id === activeConversationId
   );
+  const activeConversationClearedTimestampMs = getConversationClearedTimestampMs(
+    activeConversation,
+    user?.uid
+  );
+  const visibleMessages = useMemo(() => {
+    if (!activeConversationClearedTimestampMs) {
+      return messages;
+    }
+
+    return messages.filter(
+      (message) => getTimestampMs(message.createdAt) > activeConversationClearedTimestampMs
+    );
+  }, [activeConversationClearedTimestampMs, messages]);
 
   const markConversationAsRead = (conversationId, timestampValue) => {
     const timestampMs = getTimestampMs(timestampValue);
@@ -556,11 +574,16 @@ const ChatWidget = () => {
   const unreadConversationIds = useMemo(() => {
     return enrichedConversations.reduce((result, conversation) => {
       const latestMessageMs = getTimestampMs(conversation.updatedAt);
+      const clearedTimestampMs = getConversationClearedTimestampMs(
+        conversation,
+        user?.uid
+      );
       const seenTimestampMs = seenConversationTimestamps[conversation.id] || 0;
+      const baselineTimestampMs = Math.max(seenTimestampMs, clearedTimestampMs);
       const hasUnreadMessage =
         conversation.lastMessageSenderId &&
         conversation.lastMessageSenderId !== user?.uid &&
-        latestMessageMs > seenTimestampMs;
+        latestMessageMs > baselineTimestampMs;
 
       if (hasUnreadMessage) {
         result.push(conversation.id);
@@ -592,6 +615,7 @@ const ChatWidget = () => {
     setDraftMessage("");
     setMessageActionInFlightId(null);
     setActionMenuMessageId(null);
+    setThreadMenuOpen(false);
     setSelectedAttachment((currentAttachment) => {
       if (currentAttachment?.previewUrl) {
         window.URL.revokeObjectURL(currentAttachment.previewUrl);
@@ -607,17 +631,21 @@ const ChatWidget = () => {
 
       if (
         target instanceof Element &&
-        target.closest(".chat-bubble-actions-menu, .chat-composer-editing, [data-chat-bubble-id]")
+        target.closest(
+          ".chat-bubble-actions-menu, .chat-thread-actions, .chat-thread-menu, .chat-composer-editing, .chat-composer-replying, [data-chat-bubble-id]"
+        )
       ) {
         return;
       }
 
       setActionMenuMessageId(null);
+      setThreadMenuOpen(false);
     };
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setActionMenuMessageId(null);
+        setThreadMenuOpen(false);
       }
     };
 
@@ -673,7 +701,7 @@ const ChatWidget = () => {
 
     const syncActiveConversationReadState = () => {
       const latestMessageTimestamp =
-        messages[messages.length - 1]?.createdAt || activeConversation?.updatedAt;
+        visibleMessages[visibleMessages.length - 1]?.createdAt || activeConversation?.updatedAt;
       const timestampMs = getTimestampMs(latestMessageTimestamp);
       const remoteReadTimestampMs = getReadStateTimestampMs(
         activeConversation,
@@ -728,15 +756,15 @@ const ChatWidget = () => {
       window.removeEventListener("focus", handleReadSyncVisibility);
       document.removeEventListener("visibilitychange", handleReadSyncVisibility);
     };
-  }, [activeConversation, activeConversationId, isOpen, messages, user?.uid]);
+  }, [activeConversation, activeConversationId, isOpen, user?.uid, visibleMessages]);
 
   useEffect(() => {
-    if (!activeConversationId || !isOpen || !user?.uid || messages.length === 0) {
+    if (!activeConversationId || !isOpen || !user?.uid || visibleMessages.length === 0) {
       return undefined;
     }
 
     const syncMessageReadReceipts = () => {
-      const unreadIncomingMessages = messages.filter(
+      const unreadIncomingMessages = visibleMessages.filter(
         (message) =>
           message.senderId &&
           message.senderId !== user.uid &&
@@ -782,7 +810,7 @@ const ChatWidget = () => {
       window.removeEventListener("focus", handleReceiptSyncVisibility);
       document.removeEventListener("visibilitychange", handleReceiptSyncVisibility);
     };
-  }, [activeConversationId, isOpen, messages, user?.uid]);
+  }, [activeConversationId, isOpen, user?.uid, visibleMessages]);
 
   useEffect(() => {
     if (!user?.uid || !hasLoadedConversationsRef.current || enrichedConversations.length === 0) {
@@ -948,6 +976,17 @@ const ChatWidget = () => {
   const contactListUsers = useMemo(() => {
     return filteredContacts.filter((contact) => !recentContactIdSet.has(contact.id));
   }, [filteredContacts, recentContactIdSet]);
+
+  const getConversationPreviewText = (conversation) => {
+    const clearedTimestampMs = getConversationClearedTimestampMs(conversation, user?.uid);
+    const updatedAtMs = getTimestampMs(conversation.updatedAt);
+
+    if (clearedTimestampMs && updatedAtMs <= clearedTimestampMs) {
+      return "No messages yet";
+    }
+
+    return conversation.lastMessageText || "No messages yet";
+  };
 
   const getOwnMessageStatus = (message) => {
     const messageTimestampMs = getTimestampMs(message?.createdAt);
@@ -1271,6 +1310,73 @@ const ChatWidget = () => {
     setActionMenuMessageId((current) => (current === messageId ? null : messageId));
   };
 
+  const clearConversationHistory = async () => {
+    if (!conversationRef || !activeConversationId || !user?.uid) {
+      return;
+    }
+
+    setThreadMenuOpen(false);
+
+    const confirmed = window.confirm("Clear this chat only for you?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      try {
+        const headers = await getAuthenticatedRequestHeaders();
+        const response = await fetch(
+          `${API_URL}/api/chat/conversations/${activeConversationId}/clear`,
+          {
+            method: "POST",
+            headers
+          }
+        );
+
+        if (response.status === 404) {
+          throw new Error("CHAT_API_ROUTE_NOT_FOUND");
+        }
+
+        if (!response.ok) {
+          const errorPayload = await response.json().catch(() => ({}));
+          throw new Error(errorPayload.error || "Failed to clear chat");
+        }
+      } catch (apiError) {
+        if (!isMissingChatApiRoute(apiError)) {
+          throw apiError;
+        }
+
+        const clearedAtValue = firebase.firestore.FieldValue.serverTimestamp();
+
+        await conversationRef.set(
+          {
+            clearStates: {
+              [user.uid]: clearedAtValue
+            }
+          },
+          { merge: true }
+        );
+      }
+
+      setEditingMessageId(null);
+      setReplyingToMessage(null);
+      setDraftMessage("");
+      clearSelectedAttachment();
+      setSeenConversationTimestamps((current) => ({
+        ...current,
+        [activeConversationId]: Date.now()
+      }));
+    } catch (error) {
+      console.error("Failed to clear chat history:", error);
+      toast.error(
+        error.message === "CHAT_API_ROUTE_NOT_FOUND"
+          ? "Chat clear API is not deployed yet."
+          : error.message || "Failed to clear chat."
+      );
+    }
+  };
+
   const handleMessagePointerDown = (messageId) => {
     clearLongPressTimer();
 
@@ -1516,7 +1622,7 @@ const ChatWidget = () => {
                               <small>{formatConversationTime(conversation.updatedAt)}</small>
                             </span>
                             <span className="chat-list-subline">
-                              {conversation.lastMessageText || "No messages yet"}
+                              {getConversationPreviewText(conversation)}
                             </span>
                           </span>
                           {unreadConversationIdSet.has(conversation.id) && (
@@ -1603,16 +1709,37 @@ const ChatWidget = () => {
                     <p className="chat-thread-meta">
                       {[activeContact.role, activeContact.country].filter(Boolean).join(" / ")}
                     </p>
+                    <div className="chat-thread-actions">
+                      <button
+                        type="button"
+                        className="chat-thread-menu-trigger"
+                        onClick={() => setThreadMenuOpen((current) => !current)}
+                        aria-label="Chat options"
+                      >
+                        <FontAwesomeIcon icon={faEllipsisVertical} />
+                      </button>
+                      {threadMenuOpen && (
+                        <div className="chat-thread-menu" role="menu">
+                          <button
+                            type="button"
+                            className="chat-thread-menu-item danger"
+                            onClick={clearConversationHistory}
+                          >
+                            Clear chat
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="chat-thread-messages">
-                    {messages.length === 0 ? (
+                    {visibleMessages.length === 0 ? (
                       <div className="chat-thread-empty">
                         <strong>No messages yet</strong>
                         <span>Send your first message to start the conversation.</span>
                       </div>
                     ) : (
-                      messages.map((message) => {
+                      visibleMessages.map((message) => {
                         const isOwnMessage = message.senderId === user.uid;
                         const isDeletedMessage = Boolean(message.deletedAt);
                         const isMessageActionPending =
