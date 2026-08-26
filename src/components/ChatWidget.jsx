@@ -664,6 +664,8 @@ const ChatWidget = () => {
       return undefined;
     }
 
+    setMessages([]);
+
     const unsubscribe = firestore
       .collection("chatConversations")
       .doc(activeConversationId)
