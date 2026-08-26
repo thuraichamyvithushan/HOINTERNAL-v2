@@ -126,6 +126,26 @@ if (supportsSocketServer) {
         socket.join(getSocketUserRoom(uid));
         socket.emit('chat:socket-ready', { uid });
 
+        socket.on('chat:messages-read', (payload = {}) => {
+            const conversationId = payload.conversationId || null;
+            const senderId = payload.senderId || null;
+            const readAtMs = Number(payload.readAtMs) || Date.now();
+            const messageIds = Array.isArray(payload.messageIds)
+                ? payload.messageIds.filter((messageId) => typeof messageId === 'string' && messageId)
+                : [];
+
+            if (!senderId) {
+                return;
+            }
+
+            io.to(getSocketUserRoom(senderId)).emit('chat:messages-read', {
+                conversationId,
+                readerId: uid,
+                messageIds,
+                readAtMs
+            });
+        });
+
         socket.on('disconnect', () => {
             socket.leave(getSocketUserRoom(uid));
         });

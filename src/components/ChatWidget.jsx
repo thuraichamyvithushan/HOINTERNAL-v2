@@ -129,9 +129,55 @@ const getMessageReplyPreviewText = (message = {}) => {
 
 const getTimestampMs = (value) => {
   if (!value) return 0;
+  if (typeof value === "number") return value;
+  if (value instanceof Date) return value.getTime();
   if (typeof value.toMillis === "function") return value.toMillis();
   if (value.seconds) return value.seconds * 1000;
   return 0;
+};
+
+const createClientMessageId = (userId = "") =>
+  `${userId || "user"}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const revokeAttachmentPreviewUrl = (url = "") => {
+  if (
+    typeof window !== "undefined" &&
+    typeof url === "string" &&
+    url.startsWith("blob:")
+  ) {
+    window.URL.revokeObjectURL(url);
+  }
+};
+
+const setConversationReadState = (
+  conversations,
+  conversationId,
+  participantId,
+  timestampMs
+) => {
+  if (!conversationId || !participantId || !timestampMs) {
+    return conversations;
+  }
+
+  return conversations.map((conversation) => {
+    if (conversation.id !== conversationId) {
+      return conversation;
+    }
+
+    const currentReadTimestampMs = getReadStateTimestampMs(conversation, participantId);
+
+    if (currentReadTimestampMs >= timestampMs) {
+      return conversation;
+    }
+
+    return {
+      ...conversation,
+      readStates: {
+        ...(conversation.readStates || {}),
+        [participantId]: timestampMs
+      }
+    };
+  });
 };
 
 const formatMessageTime = (value) => {
@@ -311,6 +357,7 @@ const ChatWidget = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [optimisticMessages, setOptimisticMessages] = useState([]);
   const [activeContactId, setActiveContactId] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [actionMenuMessageId, setActionMenuMessageId] = useState(null);
@@ -330,6 +377,7 @@ const ChatWidget = () => {
   const socketRef = useRef(null);
   const isOpenRef = useRef(false);
   const activeConversationIdRef = useRef(null);
+  const composerTextareaRef = useRef(null);
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const [seenConversationTimestamps, setSeenConversationTimestamps] = useState(() =>
@@ -543,14 +591,35 @@ const ChatWidget = () => {
     user?.uid
   );
   const visibleMessages = useMemo(() => {
+    const confirmedClientMessageIds = new Set(
+      messages.map((message) => message.clientMessageId).filter(Boolean)
+    );
+    const mergedMessages = [
+      ...messages,
+      ...optimisticMessages.filter(
+        (message) =>
+          !message.clientMessageId ||
+          !confirmedClientMessageIds.has(message.clientMessageId)
+      )
+    ].sort((firstMessage, secondMessage) => {
+      const timestampDifference =
+        getTimestampMs(firstMessage.createdAt) - getTimestampMs(secondMessage.createdAt);
+
+      if (timestampDifference !== 0) {
+        return timestampDifference;
+      }
+
+      return `${firstMessage.id || ""}`.localeCompare(`${secondMessage.id || ""}`);
+    });
+
     if (!activeConversationClearedTimestampMs) {
-      return messages;
+      return mergedMessages;
     }
 
-    return messages.filter(
+    return mergedMessages.filter(
       (message) => getTimestampMs(message.createdAt) > activeConversationClearedTimestampMs
     );
-  }, [activeConversationClearedTimestampMs, messages]);
+  }, [activeConversationClearedTimestampMs, messages, optimisticMessages]);
 
   const markConversationAsRead = (conversationId, timestampValue) => {
     const timestampMs = getTimestampMs(timestampValue);
@@ -569,6 +638,27 @@ const ChatWidget = () => {
         [conversationId]: timestampMs
       };
     });
+  };
+
+  const applyConversationReadStateLocally = (
+    conversationId,
+    participantId,
+    timestampValue
+  ) => {
+    const timestampMs = getTimestampMs(timestampValue);
+
+    if (!conversationId || !participantId || !timestampMs) {
+      return;
+    }
+
+    setConversations((currentConversations) =>
+      setConversationReadState(
+        currentConversations,
+        conversationId,
+        participantId,
+        timestampMs
+      )
+    );
   };
 
   const unreadConversationIds = useMemo(() => {
@@ -623,6 +713,13 @@ const ChatWidget = () => {
 
       return null;
     });
+    setOptimisticMessages((currentMessages) => {
+      currentMessages.forEach((message) => {
+        revokeAttachmentPreviewUrl(message.attachment?.downloadUrl);
+      });
+
+      return [];
+    });
   }, [activeConversationId]);
 
   useEffect(() => {
@@ -661,6 +758,7 @@ const ChatWidget = () => {
   useEffect(() => {
     if (!activeConversationId) {
       setMessages([]);
+      setOptimisticMessages([]);
       return undefined;
     }
 
@@ -679,6 +777,31 @@ const ChatWidget = () => {
           }));
 
           setMessages(nextMessages);
+          setOptimisticMessages((currentMessages) => {
+            const confirmedClientMessageIds = new Set(
+              nextMessages.map((message) => message.clientMessageId).filter(Boolean)
+            );
+
+            if (confirmedClientMessageIds.size === 0) {
+              return currentMessages;
+            }
+
+            const pendingMessages = [];
+
+            currentMessages.forEach((message) => {
+              if (
+                message.clientMessageId &&
+                confirmedClientMessageIds.has(message.clientMessageId)
+              ) {
+                revokeAttachmentPreviewUrl(message.attachment?.downloadUrl);
+                return;
+              }
+
+              pendingMessages.push(message);
+            });
+
+            return pendingMessages;
+          });
         },
         (error) => {
           console.error("Failed to load chat messages:", error);
@@ -715,6 +838,11 @@ const ChatWidget = () => {
       }
 
       markConversationAsRead(activeConversationId, latestMessageTimestamp);
+      applyConversationReadStateLocally(
+        activeConversationId,
+        user.uid,
+        latestMessageTimestamp
+      );
 
       if (remoteReadTimestampMs >= timestampMs) {
         return;
@@ -777,7 +905,16 @@ const ChatWidget = () => {
         return;
       }
 
+      const latestUnreadTimestampMs = unreadIncomingMessages.reduce(
+        (maxTimestampMs, message) =>
+          Math.max(maxTimestampMs, getTimestampMs(message.createdAt)),
+        0
+      );
+      const readAtMs = Date.now();
       const batch = firestore.batch();
+      const conversationDocRef = firestore
+        .collection("chatConversations")
+        .doc(activeConversationId);
       const messagesCollectionRef = firestore
         .collection("chatConversations")
         .doc(activeConversationId)
@@ -790,9 +927,37 @@ const ChatWidget = () => {
         });
       });
 
-      batch.commit().catch((error) => {
-        console.warn("Failed to sync chat message read receipts:", error);
-      });
+      if (latestUnreadTimestampMs) {
+        batch.set(
+          conversationDocRef,
+          {
+            readStates: {
+              [user.uid]: firebase.firestore.Timestamp.fromMillis(latestUnreadTimestampMs)
+            }
+          },
+          { merge: true }
+        );
+        applyConversationReadStateLocally(
+          activeConversationId,
+          user.uid,
+          latestUnreadTimestampMs
+        );
+      }
+
+      batch.commit()
+        .then(() => {
+          if (socketRef.current?.connected) {
+            socketRef.current.emit("chat:messages-read", {
+              conversationId: activeConversationId,
+              senderId: unreadIncomingMessages[0]?.senderId || null,
+              messageIds: unreadIncomingMessages.map((message) => message.id),
+              readAtMs
+            });
+          }
+        })
+        .catch((error) => {
+          console.warn("Failed to sync chat message read receipts:", error);
+        });
     };
 
     syncMessageReadReceipts();
@@ -929,10 +1094,57 @@ const ChatWidget = () => {
           });
         };
 
+        const handleMessagesRead = (payload = {}) => {
+          const {
+            conversationId,
+            messageIds = [],
+            readAtMs,
+            readerId
+          } = payload;
+
+          if (!conversationId || !readerId || readerId === user.uid) {
+            return;
+          }
+
+          const normalizedReadAtMs = getTimestampMs(readAtMs) || Date.now();
+          const readMessageIdSet = new Set(
+            Array.isArray(messageIds) ? messageIds.filter(Boolean) : []
+          );
+
+          applyConversationReadStateLocally(
+            conversationId,
+            readerId,
+            normalizedReadAtMs
+          );
+
+          if (conversationId !== activeConversationIdRef.current) {
+            return;
+          }
+
+          if (readMessageIdSet.size === 0) {
+            return;
+          }
+
+          setMessages((currentMessages) =>
+            currentMessages.map((message) => {
+              if (!readMessageIdSet.has(message.id) || message.senderId !== user.uid) {
+                return message;
+              }
+
+              return {
+                ...message,
+                readAt: normalizedReadAtMs,
+                readBy: readerId
+              };
+            })
+          );
+        };
+
         socket.on("connect", handleConnect);
         socket.on("disconnect", handleDisconnect);
         socket.on("connect_error", handleConnectError);
         socket.on("chat:new-message", handleNewMessage);
+        socket.on("chat:messages-read", handleMessagesRead);
       } catch (error) {
         console.warn("Failed to initialize chat socket:", error);
       }
@@ -997,8 +1209,10 @@ const ChatWidget = () => {
       activeConversation,
       activeContactId
     );
+    const isReadByRecipient =
+      Boolean(message?.readBy) && message.readBy !== user.uid;
 
-    if (directReadTimestampMs && message?.readBy === activeContactId) {
+    if (directReadTimestampMs && isReadByRecipient) {
       return "read";
     }
 
@@ -1061,9 +1275,7 @@ const ChatWidget = () => {
 
   const clearSelectedAttachment = () => {
     setSelectedAttachment((currentAttachment) => {
-      if (currentAttachment?.previewUrl) {
-        window.URL.revokeObjectURL(currentAttachment.previewUrl);
-      }
+      revokeAttachmentPreviewUrl(currentAttachment?.previewUrl);
 
       return null;
     });
@@ -1102,6 +1314,20 @@ const ChatWidget = () => {
         previewUrl: category === "image" ? window.URL.createObjectURL(file) : ""
       };
     });
+  };
+
+  const syncComposerTextareaHeight = (element) => {
+    if (!element) {
+      return;
+    }
+
+    element.style.height = "auto";
+    element.style.height = `${Math.min(element.scrollHeight, 120)}px`;
+  };
+
+  const handleDraftMessageChange = (event) => {
+    setDraftMessage(event.target.value);
+    syncComposerTextareaHeight(event.target);
   };
 
   const uploadChatAttachment = async (conversationId, messageId, attachment) => {
@@ -1420,12 +1646,43 @@ const ChatWidget = () => {
     const messageRef = sendConversationRef.collection("messages").doc();
     const batch = firestore.batch();
     const activeRecipient = usersById[activeContactId];
+    const attachmentToSend = selectedAttachment;
+    const replyTarget = replyingToMessage;
+    const draftMessageValue = draftMessage;
+    const clientMessageId = createClientMessageId(user.uid);
+    const optimisticCreatedAt = Date.now();
     let attachmentPayload = null;
 
     if (!activeRecipient) {
       return;
     }
 
+    setOptimisticMessages((currentMessages) => [
+      ...currentMessages,
+      {
+        id: `optimistic-${messageRef.id}`,
+        clientMessageId,
+        text: trimmedMessage,
+        attachment: attachmentToSend
+          ? {
+              category: attachmentToSend.category,
+              downloadUrl: attachmentToSend.previewUrl || "",
+              mimeType:
+                attachmentToSend.file?.type || "application/octet-stream",
+              name: attachmentToSend.file?.name || "Attachment",
+              size: attachmentToSend.file?.size || 0
+            }
+          : null,
+        replyTo: replyTarget,
+        senderId: user.uid,
+        senderName: user.name || user.displayName || user.email || "You",
+        recipientId: activeContactId,
+        createdAt: optimisticCreatedAt
+      }
+    ]);
+    setDraftMessage("");
+    setReplyingToMessage(null);
+    setSelectedAttachment(null);
     setIsSending(true);
 
     try {
@@ -1433,7 +1690,7 @@ const ChatWidget = () => {
         attachmentPayload = await uploadChatAttachment(
           conversationId,
           messageRef.id,
-          selectedAttachment
+          attachmentToSend
         );
       }
 
@@ -1471,9 +1728,10 @@ const ChatWidget = () => {
 
       batch.set(sendConversationRef, baseConversationPayload, { merge: true });
       batch.set(messageRef, {
+        clientMessageId,
         text: trimmedMessage,
         attachment: attachmentPayload,
-        replyTo: replyingToMessage,
+        replyTo: replyTarget,
         senderId: user.uid,
         senderName: user.name || user.displayName || user.email || "You",
         recipientId: activeContactId,
@@ -1490,12 +1748,17 @@ const ChatWidget = () => {
       );
 
       await batch.commit();
-      setDraftMessage("");
-      setReplyingToMessage(null);
-      clearSelectedAttachment();
     } catch (error) {
       console.error("Failed to send chat message:", error);
       toast.error("Failed to send message.");
+      setOptimisticMessages((currentMessages) =>
+        currentMessages.filter((message) => message.clientMessageId !== clientMessageId)
+      );
+      setDraftMessage(draftMessageValue);
+      setReplyingToMessage(replyTarget);
+      if (attachmentToSend) {
+        setSelectedAttachment(attachmentToSend);
+      }
 
       if (attachmentPayload?.storagePath) {
         storage.ref(attachmentPayload.storagePath).delete().catch(() => {});
@@ -1517,6 +1780,10 @@ const ChatWidget = () => {
       cancelEditingMessage();
     }
   };
+
+  useEffect(() => {
+    syncComposerTextareaHeight(composerTextareaRef.current);
+  }, [draftMessage, editingMessageId, replyingToMessage, selectedAttachment]);
 
   const handleMessageKeyDown = (event, messageId) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -1825,7 +2092,7 @@ const ChatWidget = () => {
                                       alt={message.attachment.name || "Chat attachment"}
                                     />
                                   </button>
-                                ) : (
+                                ) : message.attachment.downloadUrl ? (
                                   <a
                                     className="chat-attachment file"
                                     href={message.attachment.downloadUrl}
@@ -1844,6 +2111,20 @@ const ChatWidget = () => {
                                       </small>
                                     </span>
                                   </a>
+                                ) : (
+                                  <div className="chat-attachment file">
+                                    <span className="chat-attachment-icon">
+                                      <FontAwesomeIcon icon={faFileLines} />
+                                    </span>
+                                    <span className="chat-attachment-meta">
+                                      <strong>{message.attachment.name || "Attachment"}</strong>
+                                      <small>
+                                        {[formatAttachmentSize(message.attachment.size), message.attachment.mimeType]
+                                          .filter(Boolean)
+                                          .join(" / ")}
+                                      </small>
+                                    </span>
+                                  </div>
                                 ))}
                               {isDeletedMessage ? (
                                 <p className="chat-deleted-message">
@@ -1954,37 +2235,6 @@ const ChatWidget = () => {
                         </button>
                       </div>
                     )}
-                    {selectedAttachment && !editingMessageId && (
-                      <div className="chat-composer-attachment">
-                        {selectedAttachment.category === "image" && selectedAttachment.previewUrl ? (
-                          <img
-                            className="chat-composer-attachment-preview"
-                            src={selectedAttachment.previewUrl}
-                            alt={selectedAttachment.file.name}
-                          />
-                        ) : (
-                          <span className="chat-composer-attachment-icon">
-                            <FontAwesomeIcon icon={faFileLines} />
-                          </span>
-                        )}
-                        <div className="chat-composer-attachment-copy">
-                          <span className="chat-composer-attachment-name">
-                            {selectedAttachment.file.name}
-                          </span>
-                          <span className="chat-composer-attachment-size">
-                            {formatAttachmentSize(selectedAttachment.file.size)}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          className="chat-composer-cancel"
-                          onClick={clearSelectedAttachment}
-                          aria-label="Remove attachment"
-                        >
-                          <FontAwesomeIcon icon={faXmark} />
-                        </button>
-                      </div>
-                    )}
                     <input
                       ref={imageInputRef}
                       type="file"
@@ -1998,37 +2248,77 @@ const ChatWidget = () => {
                       className="chat-file-input"
                       onChange={(event) => handleAttachmentSelection(event, "file")}
                     />
-                    {!editingMessageId && (
-                      <>
-                        <button
-                          type="button"
-                          className="chat-attach-btn"
-                          onClick={() => imageInputRef.current?.click()}
-                          aria-label="Send image"
-                        >
-                          <FontAwesomeIcon icon={faImage} />
-                        </button>
-                        <button
-                          type="button"
-                          className="chat-attach-btn"
-                          onClick={() => fileInputRef.current?.click()}
-                          aria-label="Send file"
-                        >
-                          <FontAwesomeIcon icon={faPaperclip} />
-                        </button>
-                      </>
-                    )}
-                    <textarea
-                      value={draftMessage}
-                      onChange={(event) => setDraftMessage(event.target.value)}
-                      onKeyDown={handleComposerKeyDown}
-                      placeholder={
-                        editingMessageId
-                          ? "Edit your message"
-                          : `Message ${getDisplayName(activeContact)}`
-                      }
-                      rows={1}
-                    />
+                    <div
+                      className={`chat-composer-input-shell ${
+                        selectedAttachment && !editingMessageId ? "has-attachment" : ""
+                      }`}
+                    >
+                      {selectedAttachment && !editingMessageId && (
+                        <div className="chat-composer-attachment">
+                          {selectedAttachment.category === "image" && selectedAttachment.previewUrl ? (
+                            <img
+                              className="chat-composer-attachment-preview"
+                              src={selectedAttachment.previewUrl}
+                              alt={selectedAttachment.file.name}
+                            />
+                          ) : (
+                            <span className="chat-composer-attachment-icon">
+                              <FontAwesomeIcon icon={faFileLines} />
+                            </span>
+                          )}
+                          <div className="chat-composer-attachment-copy">
+                            <span className="chat-composer-attachment-name">
+                              {selectedAttachment.file.name}
+                            </span>
+                            <span className="chat-composer-attachment-size">
+                              {formatAttachmentSize(selectedAttachment.file.size)}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="chat-composer-cancel"
+                            onClick={clearSelectedAttachment}
+                            aria-label="Remove attachment"
+                          >
+                            <FontAwesomeIcon icon={faXmark} />
+                          </button>
+                        </div>
+                      )}
+                      <div className="chat-composer-input-row">
+                        {!editingMessageId && (
+                          <>
+                            <button
+                              type="button"
+                              className="chat-attach-btn"
+                              onClick={() => imageInputRef.current?.click()}
+                              aria-label="Send image"
+                            >
+                              <FontAwesomeIcon icon={faImage} />
+                            </button>
+                            <button
+                              type="button"
+                              className="chat-attach-btn"
+                              onClick={() => fileInputRef.current?.click()}
+                              aria-label="Send file"
+                            >
+                              <FontAwesomeIcon icon={faPaperclip} />
+                            </button>
+                          </>
+                        )}
+                        <textarea
+                          ref={composerTextareaRef}
+                          value={draftMessage}
+                          onChange={handleDraftMessageChange}
+                          onKeyDown={handleComposerKeyDown}
+                          placeholder={
+                            editingMessageId
+                              ? "Edit your message"
+                              : `Message ${getDisplayName(activeContact)}`
+                          }
+                          rows={1}
+                        />
+                      </div>
+                    </div>
 
                     <button
                       type="button"
