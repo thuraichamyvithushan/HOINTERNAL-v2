@@ -1,5 +1,9 @@
 import React, { createContext, useState, useEffect } from "react";
 import { auth, firestore } from "../firebase";
+import {
+  clearChatPushRegistration,
+  ensureChatPushRegistration
+} from "../utils/chatPushNotifications";
 
 // Create context
 export const AuthContext = createContext();
@@ -15,15 +19,19 @@ export const AuthProvider = ({ children }) => {
           const userDoc = await firestore.collection("users").doc(firebaseUser.uid).get();
           if (userDoc.exists) {
             setUser({ uid: firebaseUser.uid, ...userDoc.data() });
+            ensureChatPushRegistration(firebaseUser.uid);
           } else {
             setUser(null);
+            clearChatPushRegistration();
           }
         } catch (error) {
           console.error("Error fetching user role:", error);
           setUser(null);
+          clearChatPushRegistration();
         }
       } else {
         setUser(null);
+        clearChatPushRegistration();
       }
       setLoading(false);
     });

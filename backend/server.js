@@ -67,6 +67,16 @@ const socketCorsOrigin = (origin, callback) => {
 };
 
 const getSocketUserRoom = (uid) => `user:${uid}`;
+const CHAT_NOTIFICATION_TOKENS_FIELD = 'chatNotificationTokens';
+const CHAT_PRESENCE_STALE_MS = 90000;
+const CHAT_PUSH_FALLBACK_LINK =
+    process.env.CHAT_PUSH_LINK_URL || 'https://www.hointernal.com/#/';
+
+const getStableParticipants = (firstUserId, secondUserId) =>
+    [firstUserId, secondUserId].sort();
+
+const getConversationId = (firstUserId, secondUserId) =>
+    getStableParticipants(firstUserId, secondUserId).join('__');
 
 const getTimestampMs = (value) => {
     if (!value) {
@@ -83,6 +93,131 @@ const getTimestampMs = (value) => {
 
     const parsedValue = new Date(value).getTime();
     return Number.isNaN(parsedValue) ? Date.now() : parsedValue;
+};
+
+const getChatPushLink = (origin) => {
+    if (origin && isAllowedOrigin(origin)) {
+        return `${origin.replace(/\/$/, '')}/#/`;
+    }
+
+    return CHAT_PUSH_FALLBACK_LINK;
+};
+
+const shouldSendChatPushNotification = (userData = {}) => {
+    const presence = userData.chatPresence || {};
+    const lastSeenMs = getTimestampMs(presence.lastSeen);
+
+    return !(
+        presence.state === 'online' &&
+        lastSeenMs > Date.now() - CHAT_PRESENCE_STALE_MS
+    );
+};
+
+const getChatPushBodyText = (messageData = {}) => {
+    const trimmedText = `${messageData.text || ''}`.trim();
+
+    if (trimmedText) {
+        return trimmedText;
+    }
+
+    if (messageData.attachment?.category === 'image') {
+        return 'Sent you a photo';
+    }
+
+    if (messageData.attachment?.name) {
+        return `Sent ${messageData.attachment.name}`;
+    }
+
+    return 'You have a new message.';
+};
+
+const sendChatPushNotification = async ({
+    recipientId,
+    conversationId,
+    senderId,
+    senderName,
+    text,
+    attachment,
+    requestOrigin
+}) => {
+    if (!recipientId || !senderId || recipientId === senderId) {
+        return;
+    }
+
+    const recipientSnapshot = await db.collection('users').doc(recipientId).get();
+
+    if (!recipientSnapshot.exists) {
+        return;
+    }
+
+    const recipientData = recipientSnapshot.data() || {};
+
+    if (!shouldSendChatPushNotification(recipientData)) {
+        return;
+    }
+
+    const tokens = Array.from(
+        new Set(
+            Array.isArray(recipientData[CHAT_NOTIFICATION_TOKENS_FIELD])
+                ? recipientData[CHAT_NOTIFICATION_TOKENS_FIELD].filter(
+                    (token) => typeof token === 'string' && token
+                )
+                : []
+        )
+    );
+
+    if (tokens.length === 0) {
+        return;
+    }
+
+    const link = getChatPushLink(requestOrigin);
+    const invalidTokens = [];
+
+    await Promise.all(tokens.map(async (token) => {
+        try {
+            await admin.messaging().send({
+                token,
+                notification: {
+                    title: senderName || 'New chat message',
+                    body: getChatPushBodyText({ text, attachment })
+                },
+                data: {
+                    conversationId: conversationId || '',
+                    senderId: senderId || '',
+                    recipientId: recipientId || '',
+                    link
+                },
+                webpush: {
+                    fcmOptions: {
+                        link
+                    },
+                    notification: {
+                        tag: `chat-${conversationId || senderId || recipientId}`,
+                        renotify: false
+                    }
+                }
+            });
+        } catch (error) {
+            console.warn('Failed to send chat push notification:', error.message);
+
+            if (
+                error?.code === 'messaging/registration-token-not-registered' ||
+                error?.code === 'messaging/invalid-registration-token'
+            ) {
+                invalidTokens.push(token);
+            }
+        }
+    }));
+
+    if (invalidTokens.length > 0) {
+        await db.collection('users').doc(recipientId).set(
+            {
+                [CHAT_NOTIFICATION_TOKENS_FIELD]:
+                    admin.firestore.FieldValue.arrayRemove(...invalidTokens)
+            },
+            { merge: true }
+        );
+    }
 };
 
 let io = null;
@@ -302,7 +437,14 @@ const requireAuthenticatedRequest = async (req, res) => {
             uid: decodedToken.uid,
             role: storedUserData.role || decodedToken.role || null,
             name: storedUserData.name || decodedToken.name || '',
-            email: storedUserData.email || decodedToken.email || ''
+            email: storedUserData.email || decodedToken.email || '',
+            country: storedUserData.country || '',
+            displayName:
+                storedUserData.displayName ||
+                storedUserData.name ||
+                decodedToken.name ||
+                decodedToken.email ||
+                'User'
         };
     } catch (error) {
         console.error('User auth verification failed:', error);
@@ -321,6 +463,7 @@ const syncChatConversationSummary = async (conversationRef) => {
     if (latestMessageSnapshot.empty) {
         await conversationRef.set(
             {
+                lastMessageId: '',
                 lastMessageText: '',
                 lastMessageSenderId: '',
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -337,6 +480,7 @@ const syncChatConversationSummary = async (conversationRef) => {
 
     await conversationRef.set(
         {
+            lastMessageId: latestMessageSnapshot.docs[0].id,
             lastMessageText,
             lastMessageSenderId: latestMessage.senderId || '',
             updatedAt: latestMessage.createdAt || admin.firestore.FieldValue.serverTimestamp()
@@ -451,6 +595,144 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
         console.error(error);
         console.error('-----------------------------------');
         res.status(500).json({ error: error.message, stack: error.stack });
+    }
+});
+
+app.post('/api/chat/conversations/:conversationId/messages', async (req, res) => {
+    const requester = await requireAuthenticatedRequest(req, res);
+
+    if (!requester) {
+        return;
+    }
+
+    try {
+        const { conversationId } = req.params;
+        const recipientId = `${req.body?.recipientId || ''}`.trim();
+        const messageId = `${req.body?.messageId || ''}`.trim();
+        const text = `${req.body?.text || ''}`.trim();
+        const attachment =
+            req.body?.attachment && typeof req.body.attachment === 'object'
+                ? req.body.attachment
+                : null;
+        const replyTo =
+            req.body?.replyTo && typeof req.body.replyTo === 'object'
+                ? req.body.replyTo
+                : null;
+
+        if (!recipientId) {
+            return res.status(400).json({ error: 'Recipient is required' });
+        }
+
+        if (recipientId === requester.uid) {
+            return res.status(400).json({ error: 'You cannot message yourself' });
+        }
+
+        if (!text && !attachment) {
+            return res.status(400).json({ error: 'Message text or attachment is required' });
+        }
+
+        const expectedConversationId = getConversationId(requester.uid, recipientId);
+
+        if (conversationId !== expectedConversationId) {
+            return res.status(400).json({ error: 'Conversation ID does not match participants' });
+        }
+
+        const recipientSnapshot = await db.collection('users').doc(recipientId).get();
+
+        if (!recipientSnapshot.exists) {
+            return res.status(404).json({ error: 'Recipient not found' });
+        }
+
+        const recipientData = recipientSnapshot.data() || {};
+        const conversationRef = db.collection('chatConversations').doc(conversationId);
+        const conversationSnapshot = await conversationRef.get();
+        const existingConversationData = conversationSnapshot.exists
+            ? conversationSnapshot.data() || {}
+            : {};
+        const participants = Array.isArray(existingConversationData.participants) &&
+            existingConversationData.participants.includes(requester.uid) &&
+            existingConversationData.participants.includes(recipientId)
+            ? existingConversationData.participants
+            : getStableParticipants(requester.uid, recipientId);
+        const finalMessageRef = messageId
+            ? conversationRef.collection('messages').doc(messageId)
+            : conversationRef.collection('messages').doc();
+        const lastMessageText =
+            text ||
+            attachment?.name ||
+            (attachment?.category === 'image' ? 'Photo' : 'Attachment');
+        const batch = db.batch();
+
+        batch.set(conversationRef, {
+            participants,
+            participantProfiles: {
+                ...(existingConversationData.participantProfiles || {}),
+                [requester.uid]: {
+                    id: requester.uid,
+                    name: requester.displayName,
+                    email: requester.email || '',
+                    role: requester.role || 'user',
+                    country: requester.country || ''
+                },
+                [recipientId]: {
+                    id: recipientId,
+                    name:
+                        recipientData.name ||
+                        recipientData.displayName ||
+                        recipientData.email ||
+                        'User',
+                    email: recipientData.email || '',
+                    role: recipientData.role || 'user',
+                    country: recipientData.country || ''
+                }
+            },
+            lastMessageId: finalMessageRef.id,
+            lastMessageText,
+            lastMessageSenderId: requester.uid,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        if (!conversationSnapshot.exists) {
+            batch.set(conversationRef, {
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
+
+        batch.set(finalMessageRef, {
+            clientMessageId: `${req.body?.clientMessageId || ''}`.trim() || null,
+            text,
+            attachment,
+            replyTo,
+            senderId: requester.uid,
+            senderName: requester.displayName,
+            recipientId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        batch.set(conversationRef, {
+            readStates: {
+                [requester.uid]: admin.firestore.FieldValue.serverTimestamp()
+            }
+        }, { merge: true });
+
+        await batch.commit();
+        await sendChatPushNotification({
+            recipientId,
+            conversationId,
+            senderId: requester.uid,
+            senderName: requester.displayName,
+            text,
+            attachment,
+            requestOrigin: req.headers.origin || ''
+        });
+
+        res.status(200).json({
+            success: true,
+            messageId: finalMessageRef.id
+        });
+    } catch (error) {
+        console.error('Failed to send chat message via API:', error);
+        res.status(500).json({ error: error.message || 'Failed to send message' });
     }
 });
 

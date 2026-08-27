@@ -1,6 +1,7 @@
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
+import 'firebase/compat/messaging';
 import 'firebase/compat/storage';
 
 // Your web app's Firebase configuration
@@ -20,6 +21,10 @@ firebase.initializeApp(firebaseConfig);
 
 export const firestore = firebase.firestore();
 export const auth = firebase.auth();
+export const messaging =
+  typeof window !== "undefined" && typeof firebase.messaging === "function"
+    ? firebase.messaging()
+    : null;
 export const storage = firebase.storage();
 
 // Explicitly persist auth session in localStorage so users remain logged in

@@ -139,6 +139,14 @@ const getTimestampMs = (value) => {
 const createClientMessageId = (userId = "") =>
   `${userId || "user"}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
+const sortConversationsByUpdatedAtDesc = (conversationList = []) =>
+  [...conversationList].sort((firstConversation, secondConversation) => {
+    return (
+      getTimestampMs(secondConversation.updatedAt) -
+      getTimestampMs(firstConversation.updatedAt)
+    );
+  });
+
 const revokeAttachmentPreviewUrl = (url = "") => {
   if (
     typeof window !== "undefined" &&
@@ -266,6 +274,24 @@ const formatLastSeen = (profile = {}) => {
 const getSeenTimestampsStorageKey = (userId) =>
   `${STORAGE_KEY_PREFIX}:${userId}`;
 
+const getConversationNotificationKey = (
+  conversationId = "",
+  lastMessageId = "",
+  fallbackTimestampMs = 0
+) => {
+  const normalizedConversationId = conversationId || "conversation";
+
+  if (lastMessageId) {
+    return `${normalizedConversationId}:${lastMessageId}`;
+  }
+
+  if (fallbackTimestampMs) {
+    return `${normalizedConversationId}:${fallbackTimestampMs}`;
+  }
+
+  return normalizedConversationId;
+};
+
 const supportsBrowserNotifications = () =>
   typeof window !== "undefined" && "Notification" in window;
 
@@ -375,6 +401,7 @@ const ChatWidget = () => {
   const hasLoadedConversationsRef = useRef(false);
   const isSocketConnectedRef = useRef(false);
   const socketRef = useRef(null);
+  const conversationsRef = useRef([]);
   const isOpenRef = useRef(false);
   const activeConversationIdRef = useRef(null);
   const composerTextareaRef = useRef(null);
@@ -391,6 +418,10 @@ const ChatWidget = () => {
     isSocketConnectedRef.current = false;
     socketRef.current = null;
   }, [user?.uid]);
+
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -512,7 +543,11 @@ const ChatWidget = () => {
                 latestMessageMs
               ) {
                 notifiedConversationKeysRef.current.add(
-                  `${conversation.id}:${latestMessageMs}`
+                  getConversationNotificationKey(
+                    conversation.id,
+                    conversation.lastMessageId,
+                    latestMessageMs
+                  )
                 );
               }
             });
@@ -991,7 +1026,11 @@ const ChatWidget = () => {
         conversation.lastMessageSenderId !== user.uid;
       const isConversationOpen =
         isOpen && conversation.id === activeConversationId;
-      const notificationKey = `${conversation.id}:${latestMessageMs}`;
+      const notificationKey = getConversationNotificationKey(
+        conversation.id,
+        conversation.lastMessageId,
+        latestMessageMs
+      );
 
       if (!isIncomingMessage || !latestMessageMs) {
         return;
@@ -1002,7 +1041,7 @@ const ChatWidget = () => {
         return;
       }
 
-      if (isSocketConnectedRef.current || notifiedConversationKeysRef.current.has(notificationKey)) {
+      if (notifiedConversationKeysRef.current.has(notificationKey)) {
         return;
       }
 
@@ -1067,7 +1106,11 @@ const ChatWidget = () => {
             return;
           }
 
-          const notificationKey = `${conversationId || senderId}:${messageId || Date.now()}`;
+          const notificationKey = getConversationNotificationKey(
+            conversationId || senderId,
+            messageId,
+            getTimestampMs(payload.createdAtMs) || Date.now()
+          );
 
           if (notifiedConversationKeysRef.current.has(notificationKey)) {
             return;
@@ -1353,6 +1396,187 @@ const ChatWidget = () => {
       size: file.size,
       storagePath
     };
+  };
+
+  const sendMessageViaApi = async ({
+    conversationId,
+    messageId,
+    recipientId,
+    text,
+    attachment,
+    replyTo,
+    clientMessageId
+  }) => {
+    const response = await fetch(
+      `${API_URL}/api/chat/conversations/${conversationId}/messages`,
+      {
+        method: "POST",
+        headers: await getAuthenticatedRequestHeaders(),
+        body: JSON.stringify({
+          recipientId,
+          messageId,
+          text,
+          attachment,
+          replyTo,
+          clientMessageId
+        })
+      }
+    );
+
+    if (response.status === 404) {
+      throw new Error("CHAT_API_ROUTE_NOT_FOUND");
+    }
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Failed to send message");
+    }
+
+    return payload;
+  };
+
+  const sendMessageViaFirestore = async ({
+    conversationId,
+    messageId,
+    participants,
+    activeRecipient,
+    attachmentPayload,
+    replyTarget,
+    trimmedMessage,
+    clientMessageId
+  }) => {
+    const sendConversationRef = firestore.collection("chatConversations").doc(conversationId);
+    const batch = firestore.batch();
+    const lastMessagePreview =
+      trimmedMessage ||
+      attachmentPayload?.name ||
+      (attachmentPayload?.category === "image" ? "Photo" : "Attachment");
+    const baseConversationPayload = {
+      participants,
+      participantProfiles: {
+        [user.uid]: {
+          id: user.uid,
+          name: user.name || user.displayName || user.email || "You",
+          email: user.email || "",
+          role: user.role || "user",
+          country: user.country || ""
+        },
+        [activeContactId]: {
+          id: activeRecipient.id,
+          name: getDisplayName(activeRecipient),
+          email: activeRecipient.email || "",
+          role: activeRecipient.role || "user",
+          country: activeRecipient.country || ""
+        }
+      },
+      lastMessageId: messageId,
+      lastMessageText: lastMessagePreview,
+      lastMessageSenderId: user.uid,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (!activeConversation) {
+      baseConversationPayload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+
+    batch.set(sendConversationRef, baseConversationPayload, { merge: true });
+    batch.set(sendConversationRef.collection("messages").doc(messageId), {
+      clientMessageId,
+      text: trimmedMessage,
+      attachment: attachmentPayload,
+      replyTo: replyTarget,
+      senderId: user.uid,
+      senderName: user.name || user.displayName || user.email || "You",
+      recipientId: activeContactId,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    batch.set(
+      sendConversationRef,
+      {
+        readStates: {
+          [user.uid]: firebase.firestore.FieldValue.serverTimestamp()
+        }
+      },
+      { merge: true }
+    );
+
+    await batch.commit();
+  };
+
+  const applyOutgoingConversationOptimistically = ({
+    conversationId,
+    participants,
+    activeRecipient,
+    lastMessageId,
+    lastMessageText,
+    updatedAt
+  }) => {
+    if (!conversationId || !activeRecipient || !user?.uid) {
+      return;
+    }
+
+    setConversations((currentConversations) => {
+      const existingConversation = currentConversations.find(
+        (conversation) => conversation.id === conversationId
+      );
+      const remainingConversations = currentConversations.filter(
+        (conversation) => conversation.id !== conversationId
+      );
+
+      return sortConversationsByUpdatedAtDesc([
+        {
+          ...(existingConversation || {}),
+          id: conversationId,
+          participants:
+            existingConversation?.participants?.length === 2
+              ? existingConversation.participants
+              : participants,
+          participantProfiles: {
+            ...(existingConversation?.participantProfiles || {}),
+            [user.uid]: {
+              id: user.uid,
+              name: user.name || user.displayName || user.email || "You",
+              email: user.email || "",
+              role: user.role || "user",
+              country: user.country || ""
+            },
+            [activeContactId]: {
+              id: activeRecipient.id,
+              name: getDisplayName(activeRecipient),
+              email: activeRecipient.email || "",
+              role: activeRecipient.role || "user",
+              country: activeRecipient.country || ""
+            }
+          },
+          lastMessageId,
+          lastMessageText,
+          lastMessageSenderId: user.uid,
+          updatedAt,
+          createdAt: existingConversation?.createdAt || updatedAt
+        },
+        ...remainingConversations
+      ]);
+    });
+
+    markConversationAsRead(conversationId, updatedAt);
+  };
+
+  const restoreConversationAfterSendFailure = (conversationId, previousConversation) => {
+    setConversations((currentConversations) => {
+      const remainingConversations = currentConversations.filter(
+        (conversation) => conversation.id !== conversationId
+      );
+
+      if (!previousConversation) {
+        return remainingConversations;
+      }
+
+      return sortConversationsByUpdatedAtDesc([
+        previousConversation,
+        ...remainingConversations
+      ]);
+    });
   };
 
   const saveEditedMessage = async () => {
@@ -1642,15 +1866,20 @@ const ChatWidget = () => {
       activeContactId,
       activeConversation?.participants
     );
-    const sendConversationRef = firestore.collection("chatConversations").doc(conversationId);
-    const messageRef = sendConversationRef.collection("messages").doc();
-    const batch = firestore.batch();
+    const messageRef = firestore
+      .collection("chatConversations")
+      .doc(conversationId)
+      .collection("messages")
+      .doc();
     const activeRecipient = usersById[activeContactId];
     const attachmentToSend = selectedAttachment;
     const replyTarget = replyingToMessage;
     const draftMessageValue = draftMessage;
     const clientMessageId = createClientMessageId(user.uid);
     const optimisticCreatedAt = Date.now();
+    const previousConversation =
+      conversationsRef.current.find((conversation) => conversation.id === conversationId) ||
+      null;
     let attachmentPayload = null;
 
     if (!activeRecipient) {
@@ -1699,61 +1928,52 @@ const ChatWidget = () => {
         attachmentPayload?.name ||
         (attachmentPayload?.category === "image" ? "Photo" : "Attachment");
 
-      const baseConversationPayload = {
+      applyOutgoingConversationOptimistically({
+        conversationId,
         participants,
-        participantProfiles: {
-          [user.uid]: {
-            id: user.uid,
-            name: user.name || user.displayName || user.email || "You",
-            email: user.email || "",
-            role: user.role || "user",
-            country: user.country || ""
-          },
-          [activeContactId]: {
-            id: activeRecipient.id,
-            name: getDisplayName(activeRecipient),
-            email: activeRecipient.email || "",
-            role: activeRecipient.role || "user",
-            country: activeRecipient.country || ""
-          }
-        },
+        activeRecipient,
+        lastMessageId: messageRef.id,
         lastMessageText: lastMessagePreview,
-        lastMessageSenderId: user.uid,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-
-      if (!activeConversation) {
-        baseConversationPayload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      }
-
-      batch.set(sendConversationRef, baseConversationPayload, { merge: true });
-      batch.set(messageRef, {
-        clientMessageId,
-        text: trimmedMessage,
-        attachment: attachmentPayload,
-        replyTo: replyTarget,
-        senderId: user.uid,
-        senderName: user.name || user.displayName || user.email || "You",
-        recipientId: activeContactId,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: optimisticCreatedAt
       });
-      batch.set(
-        sendConversationRef,
-        {
-          readStates: {
-            [user.uid]: firebase.firestore.FieldValue.serverTimestamp()
-          }
-        },
-        { merge: true }
-      );
 
-      await batch.commit();
+      try {
+        await sendMessageViaApi({
+          conversationId,
+          messageId: messageRef.id,
+          recipientId: activeContactId,
+          text: trimmedMessage,
+          attachment: attachmentPayload,
+          replyTo: replyTarget,
+          clientMessageId
+        });
+      } catch (apiError) {
+        if (!isMissingChatApiRoute(apiError)) {
+          throw apiError;
+        }
+
+        await sendMessageViaFirestore({
+          conversationId,
+          messageId: messageRef.id,
+          participants,
+          activeRecipient,
+          attachmentPayload,
+          replyTarget,
+          trimmedMessage,
+          clientMessageId
+        });
+      }
     } catch (error) {
       console.error("Failed to send chat message:", error);
-      toast.error("Failed to send message.");
+      toast.error(
+        error.message === "CHAT_API_ROUTE_NOT_FOUND"
+          ? "Chat send API is not deployed yet."
+          : error.message || "Failed to send message."
+      );
       setOptimisticMessages((currentMessages) =>
         currentMessages.filter((message) => message.clientMessageId !== clientMessageId)
       );
+      restoreConversationAfterSendFailure(conversationId, previousConversation);
       setDraftMessage(draftMessageValue);
       setReplyingToMessage(replyTarget);
       if (attachmentToSend) {
