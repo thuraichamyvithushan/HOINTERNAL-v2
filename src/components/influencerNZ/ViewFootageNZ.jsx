@@ -8,6 +8,24 @@ import { API_URL } from '../../config';
 import { detectFootageKind } from '../../utils/uploadFootage';
 import './InfluencerDashboardNZ.css';
 
+const getEmailLocalPart = (email = '') => {
+    if (typeof email !== 'string') {
+        return '';
+    }
+
+    return email.split('@')[0]?.trim().toLowerCase() || '';
+};
+
+const isPlaceholderInfluencerName = (value = '') => {
+    const normalizedValue = `${value}`.trim().toLowerCase();
+
+    return !normalizedValue ||
+        normalizedValue === 'anonymous' ||
+        normalizedValue === 'anonymous influencer' ||
+        normalizedValue === 'influencer' ||
+        normalizedValue === 'huntsman influencer';
+};
+
 const ViewFootageNZ = ({
     isGlobal = false,
     visibilityFilter = null,
@@ -28,6 +46,7 @@ const ViewFootageNZ = ({
     const [downloadFeedback, setDownloadFeedback] = useState('');
     const [downloadProgress, setDownloadProgress] = useState(null);
     const [editingVideo, setEditingVideo] = useState(null);
+    const [userDirectory, setUserDirectory] = useState({});
     const [editForm, setEditForm] = useState({
         deviceName: '',
         species: '',
@@ -42,6 +61,24 @@ const ViewFootageNZ = ({
         "Manawatu-Whanganui", "Wellington", "Northland", "Tasman", "Nelson",
         "Marlborough", "West Coast", "Canterbury", "Otago", "Southland"
     ];
+
+    const fetchUserDirectory = async () => {
+        try {
+            const response = await fetch(`${API_URL}/api/users`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch users');
+            }
+
+            const users = await response.json();
+            const nextDirectory = Object.fromEntries(
+                users.map((entry) => [entry.uid, entry])
+            );
+
+            setUserDirectory(nextDirectory);
+        } catch (error) {
+            console.error('Error fetching user directory:', error);
+        }
+    };
 
     const fetchFootage = async () => {
         if (!user) return;
@@ -179,6 +216,22 @@ const ViewFootageNZ = ({
 
     const getMediaKind = (video) => detectFootageKind(video);
     const getMediaUrl = (video) => video?.mediaUrl || video?.videoUrl || '';
+    const getInfluencerDisplayName = (item) => {
+        const storedName = `${item?.userName || ''}`.trim();
+        const matchedUser = userDirectory[item?.userId];
+        const profileName = `${matchedUser?.displayName || matchedUser?.name || ''}`.trim();
+        const profileEmailLocalPart = getEmailLocalPart(matchedUser?.email);
+        const storedNameLooksEmailBased =
+            storedName.includes('@') ||
+            (profileEmailLocalPart && storedName.toLowerCase() === profileEmailLocalPart);
+
+        if (profileName && (isPlaceholderInfluencerName(storedName) || storedNameLooksEmailBased)) {
+            return profileName;
+        }
+
+        return storedName || profileName || 'Influencer';
+    };
+
     const getMediaLabel = (item) => {
         if (item?.isFolder) {
             return 'Images';
@@ -326,6 +379,7 @@ const ViewFootageNZ = ({
     useEffect(() => {
         if (!user) return;
         fetchFootage();
+        fetchUserDirectory();
         setVisibleCount(8);
         const intervalId = setInterval(fetchFootage, 15000);
         return () => clearInterval(intervalId);
@@ -681,7 +735,7 @@ const ViewFootageNZ = ({
                                 <div className="meta-stack">
                                     <div className="meta-item-small influencer-meta">
                                         <FontAwesomeIcon icon={faUser} />
-                                        <span>{cardItem.userName || 'Influencer'}</span>
+                                        <span>{getInfluencerDisplayName(cardItem)}</span>
                                     </div>
                                     <div className="meta-item-small location-meta">
                                         <FontAwesomeIcon icon={faLocationDot} />
@@ -1081,8 +1135,8 @@ const ViewFootageNZ = ({
                                         <span className="modal-meta-label">Influencer</span>
                                         <span className="modal-meta-value">
                                             {selectedVideo.isFolder
-                                                ? activeViewerItem?.userName || 'Huntsman Influencer'
-                                                : (selectedVideo.userName || 'Huntsman Influencer')}
+                                                ? getInfluencerDisplayName(activeViewerItem)
+                                                : getInfluencerDisplayName(selectedVideo)}
                                         </span>
                                     </div>
                                 </div>

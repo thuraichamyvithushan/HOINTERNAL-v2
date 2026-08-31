@@ -1,8 +1,15 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { getRoleHomePath } from './utils/authHelpers';
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+describe('getRoleHomePath', () => {
+  test('returns the AU influencer dashboard for Australian influencers', () => {
+    expect(getRoleHomePath({ role: 'influencer', country: 'Australia' })).toBe('/influencer-page');
+  });
+
+  test('returns the NZ influencer dashboard for New Zealand influencers', () => {
+    expect(getRoleHomePath({ role: 'influencer', country: 'New Zealand' })).toBe('/influencer-page-nz');
+  });
+
+  test('falls back to the default AU home route for unknown roles', () => {
+    expect(getRoleHomePath({ role: 'unknown', country: 'Australia' })).toBe('/home');
+  });
 });

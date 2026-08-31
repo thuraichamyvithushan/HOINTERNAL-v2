@@ -1,7 +1,7 @@
 import firebase, { firestore, storage } from '../firebase';
 
 const buildUploaderName = (user) =>
-  user?.displayName || user?.email?.split('@')[0] || 'Influencer';
+  user?.name || user?.displayName || user?.email?.split('@')[0] || 'Influencer';
 
 const IMAGE_FILE_PATTERN = /\.(avif|bmp|gif|heic|heif|jpe?g|png|svg|webp)$/i;
 const VIDEO_FILE_PATTERN = /\.(3gp|avi|m4v|mkv|mov|mp4|mpeg|mpg|webm)$/i;
@@ -114,7 +114,7 @@ export const uploadFootageFiles = async ({
         ...metadata,
         userId: user.uid,
         userName: buildUploaderName(user),
-        userPhoto: user.photoURL || '',
+        userPhoto: user.photoURL || user.profilePicture || '',
         originalFileName: file.name,
         videoUrl: uploadedFile.mediaUrl,
         mediaUrl: uploadedFile.mediaUrl,

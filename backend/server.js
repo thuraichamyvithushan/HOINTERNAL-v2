@@ -95,6 +95,102 @@ const getTimestampMs = (value) => {
     return Number.isNaN(parsedValue) ? Date.now() : parsedValue;
 };
 
+const getEmailLocalPart = (email = '') => {
+    if (typeof email !== 'string') {
+        return '';
+    }
+
+    return email.split('@')[0]?.trim() || '';
+};
+
+const isPlaceholderFootageName = (value = '') => {
+    const normalizedValue = `${value}`.trim().toLowerCase();
+
+    return !normalizedValue ||
+        normalizedValue === 'anonymous' ||
+        normalizedValue === 'anonymous influencer' ||
+        normalizedValue === 'influencer' ||
+        normalizedValue === 'huntsman influencer';
+};
+
+const resolveFootageUsers = async (userIds = []) => {
+    const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+
+    if (uniqueUserIds.length === 0) {
+        return {};
+    }
+
+    const resolvedEntries = await Promise.all(uniqueUserIds.map(async (uid) => {
+        let storedUserData = {};
+        let authUserRecord = null;
+
+        try {
+            const userDoc = await db.collection('users').doc(uid).get();
+            if (userDoc.exists) {
+                storedUserData = userDoc.data() || {};
+            }
+        } catch (error) {
+            console.warn(`Failed to read user profile for footage owner ${uid}:`, error.message);
+        }
+
+        try {
+            authUserRecord = await admin.auth().getUser(uid);
+        } catch (error) {
+            console.warn(`Failed to read auth profile for footage owner ${uid}:`, error.message);
+        }
+
+        const profileName =
+            `${storedUserData.name || storedUserData.displayName || authUserRecord?.displayName || ''}`.trim();
+        const email =
+            `${storedUserData.email || authUserRecord?.email || ''}`.trim();
+
+        return [
+            uid,
+            {
+                name: profileName || getEmailLocalPart(email) || 'Influencer',
+                hasProfileName: Boolean(profileName),
+                email,
+                photo:
+                    storedUserData.profilePicture ||
+                    storedUserData.photoURL ||
+                    authUserRecord?.photoURL ||
+                    ''
+            }
+        ];
+    }));
+
+    return Object.fromEntries(resolvedEntries);
+};
+
+const attachResolvedFootageUsers = async (videos = []) => {
+    const resolvedUsers = await resolveFootageUsers(videos.map((video) => video.userId));
+
+    return videos.map((video) => {
+        const resolvedUser = resolvedUsers[video.userId];
+
+        if (!resolvedUser) {
+            return video;
+        }
+
+        const storedName = `${video.userName || ''}`.trim();
+        const emailLocalPart = getEmailLocalPart(resolvedUser.email);
+        const storedNameLooksEmailBased =
+            storedName.includes('@') ||
+            (emailLocalPart && storedName.toLowerCase() === emailLocalPart.toLowerCase());
+
+        const nextUserName = resolvedUser.hasProfileName &&
+            (isPlaceholderFootageName(storedName) || storedNameLooksEmailBased)
+            ? resolvedUser.name
+            : (storedName || resolvedUser.name || 'Influencer');
+
+        return {
+            ...video,
+            userName: nextUserName,
+            userPhoto: video.userPhoto || resolvedUser.photo || ''
+        };
+    });
+};
+
 const getChatPushLink = (origin) => {
     if (origin && isAllowedOrigin(origin)) {
         return `${origin.replace(/\/$/, '')}/#/`;
@@ -1001,6 +1097,8 @@ app.get('/api/footage/all', async (req, res) => {
             videos = videos.filter(v => v.region === 'NZ');
         }
 
+        videos = await attachResolvedFootageUsers(videos);
+
         console.log(`Returning ${videos.length} videos after regional filtering`);
 
         // Sort in-memory to avoid extra index requirements while returning the full public feed.
@@ -1027,7 +1125,7 @@ app.get('/api/footage/:userId', async (req, res) => {
 
         const snapshot = await query.get();
 
-        const videos = snapshot.docs.map(doc => {
+        let videos = snapshot.docs.map(doc => {
             const data = doc.data();
             let createdAt = null;
             if (data.createdAt) {
@@ -1043,6 +1141,8 @@ app.get('/api/footage/:userId', async (req, res) => {
                 createdAt
             };
         });
+
+        videos = await attachResolvedFootageUsers(videos);
 
         // Sort in-memory to avoid index requirement
         videos.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -1197,22 +1297,7 @@ app.get('/api/network-summary', async (req, res) => {
         // Group by State
         const stateGroups = {};
 
-        // 1. Find all unique UIDs that are missing userName
-        const missingUids = [...new Set(footageList.filter(v => !v.userName || v.userName === 'Anonymous').map(v => v.userId))];
-
-        // 2. Resolve these UIDs from Firebase Auth
-        const resolvedMap = {};
-        await Promise.all(missingUids.map(async (uid) => {
-            try {
-                const userRec = await admin.auth().getUser(uid);
-                resolvedMap[uid] = {
-                    name: userRec.displayName || userRec.email?.split('@')[0] || 'Influencer',
-                    photo: userRec.photoURL || ''
-                };
-            } catch (e) {
-                resolvedMap[uid] = { name: 'Anonymous Influencer', photo: '' };
-            }
-        }));
+        const resolvedMap = await resolveFootageUsers(footageList.map((video) => video.userId));
 
         footageList.forEach(video => {
             const state = video.ausState || 'Unknown';
@@ -1227,10 +1312,20 @@ app.get('/api/network-summary', async (req, res) => {
 
             const uid = video.userId;
             if (!stateGroups[state].influencers[uid]) {
-                const hasName = video.userName && video.userName !== 'Anonymous';
+                const resolvedUser = resolvedMap[uid];
+                const storedName = `${video.userName || ''}`.trim();
+                const emailLocalPart = getEmailLocalPart(resolvedUser?.email);
+                const storedNameLooksEmailBased =
+                    storedName.includes('@') ||
+                    (emailLocalPart && storedName.toLowerCase() === emailLocalPart.toLowerCase());
+                const shouldUseResolvedName = resolvedUser?.hasProfileName &&
+                    (isPlaceholderFootageName(storedName) || storedNameLooksEmailBased);
+
                 stateGroups[state].influencers[uid] = {
-                    name: hasName ? video.userName : (resolvedMap[uid]?.name || 'Anonymous'),
-                    photo: hasName ? video.userPhoto : (resolvedMap[uid]?.photo || ''),
+                    name: shouldUseResolvedName
+                        ? resolvedUser.name
+                        : (storedName || resolvedUser?.name || 'Anonymous'),
+                    photo: video.userPhoto || resolvedUser?.photo || '',
                     posts: 0
                 };
             }
