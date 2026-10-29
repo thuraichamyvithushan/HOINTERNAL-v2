@@ -49,6 +49,7 @@ import ScrollToTop from './components/ScrollToTop';
 import Accounts_hr_Page from './components/Accounts-hr-dashboard';
 import Accounts_hr_Page_nz from './components/Accounts-hr-dashboardNZ';
 import ChatWidget from './components/ChatWidget';
+import WorksInProgress from './components/WorksInProgress';
 
 function App() {
   const { user, loading } = useContext(AuthContext);
@@ -86,6 +87,15 @@ function App() {
                     element={
                       <RoleProtectedRoute user={user} allowedRoles={['admin']}>
                         <AdminPage />
+                      </RoleProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/works-in-progress"
+                    element={
+                      <RoleProtectedRoute user={user} allowedRoles={['admin']}>
+                        <WorksInProgress />
                       </RoleProtectedRoute>
                     }
                   />

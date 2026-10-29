@@ -13,6 +13,13 @@ const DEFAULT_CONFIGS = {
     "dealer-nz": { pageId: "dealer-nz", sections: [] },
     "accounts-hr-au": { pageId: "accounts-hr-au", sections: [] },
     "accounts-hr-nz": { pageId: "accounts-hr-nz", sections: [] },
+    "works-in-progress-au": {
+        pageId: "works-in-progress-au",
+        sections: [
+            { id: "works-marketing", title: "Marketing", order: 0, tiles: [] },
+            { id: "works-developers", title: "Developers", order: 1, tiles: [] },
+        ],
+    },
 };
 
 /**

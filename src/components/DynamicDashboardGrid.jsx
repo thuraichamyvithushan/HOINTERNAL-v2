@@ -59,7 +59,7 @@ const TileCard = ({ tile, onNestedClick }) => (
  * DynamicDashboardGrid - A unified grid component that resolves navigation levels in real-time.
  * This fixes the stale data bug by NOT storing sections in the navStack.
  */
-const DynamicDashboardGrid = ({ pageId }) => {
+const DynamicDashboardGrid = ({ pageId, showEmptySections = false }) => {
     const { sections: rootSections, loading } = useDashboardConfig(pageId);
 
     // navStack only stores the IDs to follow: ['root', 'tile-id-1', 'tile-id-2']
@@ -111,7 +111,9 @@ const DynamicDashboardGrid = ({ pageId }) => {
             tile.title?.toLowerCase().includes(searchTerm.toLowerCase())
         ),
     }))
-    .filter((section) => section.tiles.length > 0);
+    .filter((section) =>
+        section.tiles.length > 0 || (showEmptySections && !searchTerm.trim())
+    );
 
 
 
@@ -150,6 +152,7 @@ const DynamicDashboardGrid = ({ pageId }) => {
                 type="text"
                 className="dashboard-search-input"
                 placeholder="Search dashboard..."
+                aria-label="Search dashboard"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -167,6 +170,9 @@ const DynamicDashboardGrid = ({ pageId }) => {
                     <div className={getSectionClass(section.title)}>
                         <h2 className="under">{section.title}</h2>
                         <hr />
+                        {showEmptySections && section.tiles.length === 0 && (
+                            <p style={{ color: "#ddd", margin: "24px 0" }}>No tiles added yet.</p>
+                        )}
                         <div className="row no-gutters home_row">
                             {(section.tiles || [])
                                 .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))

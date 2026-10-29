@@ -9,6 +9,7 @@ const AdminCard = () => {
     { title: "REP AU", link: "/representative-page", color: "#870303ff" },
     { title: "INFLUENCER AU", link: "/influencer-page", color: "#600202ff" },
     { title: "ACCOUNTS & HR", link: "/accounts-hr-page", color: "#600202ff" },
+    { title: "Works in progress", link: "/works-in-progress", color: "#600202ff" },
   ];
 
   const nzCards = [
