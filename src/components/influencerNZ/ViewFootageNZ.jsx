@@ -7,6 +7,7 @@ import { faSearch, faPlay, faClock, faMicrochip, faVideoSlash, faLocationDot, fa
 import { API_URL } from '../../config';
 import useFootageLibrary from '../influencer/useFootageLibrary';
 import FootagePagination from '../influencer/FootagePagination';
+import FootageLibraryFilters from '../influencer/FootageLibraryFilters';
 import '../influencer/FootageUploadQueue.css';
 import { detectFootageKind } from '../../utils/uploadFootage';
 import './InfluencerDashboardNZ.css';
@@ -618,24 +619,13 @@ const ViewFootageNZ = ({
                 </div>
             </div>
 
-            <div className="footage-library-filters">
-                {isGlobal && (
-                    <label>
-                        Influencer
-                        <select className="search-input" value={influencer} onChange={(event) => setInfluencer(event.target.value)}>
-                            <option value="">All influencers</option>
-                            {Object.values(userDirectory).sort((a, b) => (a.displayName || a.name || a.uid)
-                                .localeCompare(b.displayName || b.name || b.uid)).map((creator) => (
-                                <option key={creator.uid} value={creator.uid}>{creator.displayName || creator.name || creator.uid}</option>
-                            ))}
-                        </select>
-                    </label>
-                )}
-                <label>
-                    Upload date (UTC)
-                    <input className="search-input" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-                </label>
-            </div>
+            <FootageLibraryFilters isGlobal={isGlobal} userDirectory={userDirectory}
+                influencer={influencer} onInfluencerChange={setInfluencer} date={date} onDateChange={setDate}
+                hasFilters={Boolean(searchTerm || influencer || date)} onClear={() => {
+                    setSearchTerm('');
+                    setInfluencer('');
+                    setDate('');
+                }} />
             {error && <p role="alert">{error} <button type="button" onClick={reload}>Reload footage</button></p>}
             {loading ? <p role="status">Loading footage…</p> : !error && visibleVideos.length === 0 ? (
                 <div className="empty-state">

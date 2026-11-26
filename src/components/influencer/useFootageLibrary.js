@@ -47,6 +47,7 @@ export default function useFootageLibrary({ userId, ownerId, region, isGlobal, v
     const [pendingPage, setPendingPage] = useState(null);
     const [error, setError] = useState('');
     const [search, setSearch] = useState(searchTerm);
+    const effectiveSearch = searchTerm ? search : '';
     const [reloadCount, setReloadCount] = useState(0);
     const request = useRef(null);
     const refreshKey = useRef(null);
@@ -65,7 +66,7 @@ export default function useFootageLibrary({ userId, ownerId, region, isGlobal, v
         const params = new URLSearchParams({ page: 'numbered', pageNumber: String(pageNumber) });
         if (isGlobal) params.set('region', region);
         if (visibilityFilter) params.set('visibility', visibilityFilter);
-        if (search) params.set('search', search);
+        if (effectiveSearch) params.set('search', effectiveSearch);
         if (searchByProductOnly) params.set('productOnly', '1');
         if (influencer) params.set('influencer', influencer);
         if (date) params.set('date', date);
@@ -83,7 +84,7 @@ export default function useFootageLibrary({ userId, ownerId, region, isGlobal, v
         if (!response.ok) throw new Error('Could not load footage.');
         const data = await response.json();
         if (isFootageList(data)) {
-            const groups = groupLegacyFootage(data, { search, searchByProductOnly, influencer, date });
+            const groups = groupLegacyFootage(data, { search: effectiveSearch, searchByProductOnly, influencer, date });
             if (!signal.aborted) legacyGroups.current = groups;
             return readLegacyPage(groups, pageNumber);
         }
@@ -92,7 +93,7 @@ export default function useFootageLibrary({ userId, ownerId, region, isGlobal, v
             throw new Error('The footage API returned an unexpected response.');
         }
         return data;
-    }, [ownerId, region, isGlobal, visibilityFilter, search, searchByProductOnly, influencer, date]);
+    }, [ownerId, region, isGlobal, visibilityFilter, effectiveSearch, searchByProductOnly, influencer, date]);
 
     useEffect(() => {
         if (!userId) {
