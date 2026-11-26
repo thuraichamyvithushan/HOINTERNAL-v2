@@ -39,105 +39,89 @@ export const detectFootageKind = (fileLike = {}) => {
 const getFallbackContentType = (fileKind) =>
   fileKind === 'image' ? 'image/jpeg' : 'video/mp4';
 
-const uploadFileToStorage = ({ file, storagePath, fileKind, onProgressDelta }) =>
-  new Promise((resolve, reject) => {
-    const storageRef = storage.ref(storagePath);
-    const uploadTask = storageRef.put(file, {
-      contentType: file.type || getFallbackContentType(fileKind)
-    });
-
-    let previousBytesTransferred = 0;
-
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const delta = snapshot.bytesTransferred - previousBytesTransferred;
-        previousBytesTransferred = snapshot.bytesTransferred;
-        onProgressDelta(delta);
-      },
-      reject,
-      async () => {
-        try {
-          const mediaUrl = await uploadTask.snapshot.ref.getDownloadURL();
-          resolve({ mediaUrl, storagePath, mediaType: file.type || '', fileKind });
-        } catch (error) {
-          reject(error);
-        }
-      }
-    );
+const uploadFileToStorage = (item, onProgress) => new Promise((resolve, reject) => {
+  const task = storage.ref(item.storagePath).put(item.file, {
+    contentType: item.file.type || getFallbackContentType(item.fileKind)
   });
 
-const saveFootageMetadata = async (payload) => {
-  await firestore.collection('footage').add({
-    ...payload,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-};
+  task.on('state_changed', ({ bytesTransferred, totalBytes }) => {
+    onProgress({ bytesTransferred, progress: totalBytes ? Math.round((bytesTransferred / totalBytes) * 100) : 0 });
+  }, reject, () => resolve(task.snapshot.ref));
+});
 
-export const uploadFootageFiles = async ({
-  files,
-  user,
-  metadata,
-  onProgress = () => {},
-  onFileComplete = () => {}
-}) => {
-  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-  let uploadedBytes = 0;
-  const uploadBatchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-  const uploadBatchImageCount = files.filter((file) => detectFootageKind(file) === 'image').length;
-  const uploadBatchVideoCount = files.length - uploadBatchImageCount;
-  const uploadBatchTotal = files.length;
+export const createFootageBatch = (files, user, metadata) => {
+  const collection = firestore.collection('footage');
+  const uploadBatchId = collection.doc().id;
+  const kinds = files.map(detectFootageKind);
+  const uploadBatchImageCount = kinds.filter((kind) => kind === 'image').length;
 
-  const updateProgress = (delta) => {
-    uploadedBytes += delta;
+  return files.map((file, index) => {
+    const doc = collection.doc();
+    const fileKind = kinds[index];
+    const folder = fileKind === 'image' ? 'images' : 'videos';
+    const safeName = file.name.replace(/[\\/\s]+/g, '_');
+    const storagePath = `${folder}/${user.uid}/${doc.id}_${safeName}`;
 
-    if (totalSize > 0) {
-      onProgress(Math.min(100, Math.round((uploadedBytes / totalSize) * 100)));
-    }
-  };
-
-  for (const file of files) {
-    const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const fileKind = detectFootageKind(file);
-    const storagePath = `${fileKind === 'image' ? 'images' : 'videos'}/${user.uid}/${fileName}`;
-    let uploadedFile = null;
-
-    try {
-      uploadedFile = await uploadFileToStorage({
-        file,
-        storagePath,
-        fileKind,
-        onProgressDelta: updateProgress
-      });
-
-      await saveFootageMetadata({
+    return {
+      id: doc.id, doc, file, fileKind, storagePath, status: 'queued', progress: 0, bytesTransferred: 0,
+      metadata: {
         ...metadata,
         userId: user.uid,
         userName: buildUploaderName(user),
         userPhoto: user.photoURL || user.profilePicture || '',
         originalFileName: file.name,
-        videoUrl: uploadedFile.mediaUrl,
-        mediaUrl: uploadedFile.mediaUrl,
-        mediaType: uploadedFile.mediaType || file.type || '',
-        fileKind: uploadedFile.fileKind || fileKind,
+        mediaType: file.type || getFallbackContentType(fileKind),
+        fileKind,
         uploadBatchId,
-        uploadBatchTotal,
+        uploadBatchTotal: files.length,
         uploadBatchImageCount,
-        uploadBatchVideoCount,
-        storagePath: uploadedFile.storagePath
-      });
-
-      onFileComplete(file, { fileKind });
-    } catch (error) {
-      if (uploadedFile?.storagePath) {
-        await storage.ref(uploadedFile.storagePath).delete().catch(() => {});
+        uploadBatchVideoCount: files.length - uploadBatchImageCount,
+        storagePath
       }
+    };
+  });
+};
 
-      throw error;
-    }
+const saveFootageMetadata = async (item) => {
+  try {
+    await item.doc.set({
+      ...item.metadata,
+      videoUrl: item.mediaUrl,
+      mediaUrl: item.mediaUrl,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    // A previous attempt may have committed before the client lost its connection.
+    const existing = await item.doc.get({ source: 'server' }).catch(() => null);
+    if (existing?.data()?.storagePath !== item.storagePath) throw error;
   }
+};
 
-  onProgress(100);
+export const runFootageQueue = async (items, onChange) => {
+  const pending = items.values();
+  const worker = async () => {
+    for (const item of pending) {
+      const update = (changes) => {
+        Object.assign(item, changes);
+        onChange(item, changes);
+      };
+
+      try {
+        if (!item.storageRef) {
+          update({ status: 'uploading', progress: 0, bytesTransferred: 0, error: null });
+          item.storageRef = await uploadFileToStorage(item, update);
+        }
+        update({ status: 'saving', progress: 100, bytesTransferred: item.file.size, error: null });
+        item.mediaUrl ||= await item.storageRef.getDownloadURL();
+        await saveFootageMetadata(item);
+        update({ status: 'complete' });
+      } catch (error) {
+        update({ status: 'failed', error: getUploadErrorMessage(error) });
+      }
+    }
+  };
+
+  await Promise.all([worker(), worker()]);
 };
 
 export const getUploadErrorMessage = (error) => {

@@ -129,6 +129,18 @@ service cloud.firestore {
       }
     }
 
+    match /footage/{footageId} {
+      allow get: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId)
+        && request.resource.data.visibility in ['public', 'private']
+        && request.resource.data.region in ['AU', 'NZ']
+        && request.resource.data.fileKind in ['image', 'video']
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.storagePath.matches(
+          '(images|videos)/' + request.auth.uid + '/' + footageId + '_[^/]+'
+        );
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
