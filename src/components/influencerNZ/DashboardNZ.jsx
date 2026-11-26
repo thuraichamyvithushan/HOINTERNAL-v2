@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import LazyFootageSection from '../influencer/LazyFootageSection';
 import { AuthContext } from '../../context/AuthContext';
 import UploadFootageNZ from './UploadFootageNZ';
 import ViewFootageNZ from './ViewFootageNZ';
@@ -13,6 +14,7 @@ import './InfluencerDashboardNZ.css';
 const DashboardNZ = () => {
   const { user } = useContext(AuthContext);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const navigate = useNavigate();
   const isRepresentative = user?.role === 'representative';
@@ -59,7 +61,7 @@ const DashboardNZ = () => {
       </header>
 
       {/* Main Grid Section */}
-      <main className="dashboard-main-view">
+      {!showUploadModal && <main className="dashboard-main-view">
         <div className="full-width-section dashboard-section-gap footage-section-shell">
           <div className="section-divider divider-gap">
             <span className="divider-text">Private Storage (NZ)</span>
@@ -94,6 +96,7 @@ const DashboardNZ = () => {
             <h2 className="section-heading">shared ambassador footage</h2>
           </div>
           <div className="view-grid-wrapper">
+            <LazyFootageSection>
             <ViewFootageNZ
               isGlobal={true}
               visibilityFilter="public"
@@ -101,6 +104,7 @@ const DashboardNZ = () => {
               searchByProductOnly={true}
               searchPlaceholder="Search by product name..."
             />
+            </LazyFootageSection>
           </div>
         </div>
 
@@ -109,24 +113,25 @@ const DashboardNZ = () => {
           <div className="section-divider divider-gap">
             <span className="divider-text">NZ Influencer Network Activity</span>
           </div>
-          <InfluencerSummaryNZ />
+          <LazyFootageSection><InfluencerSummaryNZ /></LazyFootageSection>
         </div>
-      </main>
+      </main>}
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="modal-overlay animate-fade-in" onClick={() => setShowUploadModal(false)}>
+        <div className="modal-overlay animate-fade-in" onClick={() => { if (!uploadBusy) { setShowUploadModal(false); handleRefresh(); } }}>
           <div className="modal-content upload-modal-content" onClick={e => e.stopPropagation()}>
             <button
               className="modal-close-btn"
-              onClick={() => setShowUploadModal(false)}
+              onClick={() => { if (!uploadBusy) { setShowUploadModal(false); handleRefresh(); } }}
+              disabled={uploadBusy}
               aria-label="Close upload popup"
               title="Close"
             >
               &times;
             </button>
             <div className="modal-inner-scroll custom-scrollbar">
-              <UploadFootageNZ onComplete={() => { setShowUploadModal(false); handleRefresh(); }} />
+              <UploadFootageNZ onBusyChange={setUploadBusy} onComplete={() => { setShowUploadModal(false); handleRefresh(); }} />
             </div>
           </div>
         </div>

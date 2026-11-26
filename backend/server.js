@@ -1,3 +1,4 @@
+const { buildFootageCatalog, paginateFootage } = require('./footageLibrary');
 const express = require('express');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
@@ -1064,11 +1065,66 @@ app.post('/api/footage', async (req, res) => {
     }
 });
 
+const footageCatalogs = new Map();
+const footageCatalogLifetime = 30_000;
+
+const getFootageCatalog = (key, query, region, refresh) => {
+    const cached = footageCatalogs.get(key);
+    if (cached && (!cached.expires || (!refresh && cached.expires > Date.now()))) return cached.result;
+
+    const entry = { expires: 0 };
+    entry.result = query.get().then(({ docs }) => {
+        // Historical Australian uploads may have no region field.
+        const regionalDocs = docs.filter((doc) => {
+            const storedRegion = doc.get('region');
+            return !region || storedRegion === region || (region === 'AU' && !storedRegion);
+        });
+        entry.expires = Date.now() + footageCatalogLifetime;
+        return buildFootageCatalog(regionalDocs);
+    }).catch((error) => {
+        if (footageCatalogs.get(key) === entry) footageCatalogs.delete(key);
+        throw error;
+    });
+
+    footageCatalogs.delete(key);
+    if (footageCatalogs.size >= 24) footageCatalogs.delete(footageCatalogs.keys().next().value);
+    footageCatalogs.set(key, entry);
+    return entry.result;
+};
+
+const sendFootagePage = async (req, res, query, key, region) => {
+    const numbered = req.query.page === 'numbered';
+    const pageNumber = numbered ? Number(req.query.pageNumber ?? '1') : undefined;
+    if (numbered && (!Number.isSafeInteger(pageNumber) || pageNumber < 1)) {
+        return res.status(400).json({ error: 'Page number must be a positive integer.' });
+    }
+    const filters = {
+        limit: 8,
+        pageNumber,
+        influencer: String(req.query.influencer || ''),
+        date: String(req.query.date || ''),
+        search: String(req.query.search || '').trim().toLowerCase(),
+        productOnly: req.query.productOnly === '1',
+        after: numbered ? '' : String(req.query.after || '')
+    };
+    const catalog = await getFootageCatalog(key, query, region, req.query.refresh === '1');
+    const page = paginateFootage(catalog, filters);
+    if (!page) return res.status(409).json({ error: 'The library changed. Reload the first page.' });
+
+    res.set('Cache-Control', 'private, no-store');
+    return res.json({ ...page, items: await attachResolvedFootageUsers(page.items) });
+};
+
 // GET All Footage (Global Feed)
 app.get('/api/footage/all', async (req, res) => {
     try {
         const { region } = req.query;
         let query = db.collection('footage').where('visibility', '==', 'public');
+
+        if (req.query.page === '1' || req.query.page === 'numbered') {
+            const pageRegion = ['AU', 'NZ'].includes(region) ? region : undefined;
+            return await sendFootagePage(req, res, query, `public:${pageRegion || 'all'}`, pageRegion);
+        }
 
         const snapshot = await query.get();
         console.log(`Initial fetched ${snapshot.size} public videos`);
@@ -1121,6 +1177,15 @@ app.get('/api/footage/:userId', async (req, res) => {
 
         if (visibility) {
             query = query.where('visibility', '==', visibility);
+        }
+
+        if (req.query.page === '1' || req.query.page === 'numbered') {
+            const actor = await requireAuthenticatedRequest(req, res);
+            if (!actor) return;
+            if (actor.uid !== userId && actor.role !== 'admin') {
+                return res.status(403).json({ error: 'Footage access denied' });
+            }
+            return await sendFootagePage(req, res, query, JSON.stringify([userId, visibility || null]));
         }
 
         const snapshot = await query.get();
@@ -1390,6 +1455,7 @@ app.delete('/api/footage/:id', async (req, res) => {
         // 2. Delete from Firestore
         await docRef.delete();
 
+        footageCatalogs.clear();
         res.status(200).json({ success: true });
     } catch (error) {
         console.error('Error deleting footage:', error);
@@ -1409,6 +1475,7 @@ app.patch('/api/footage/:id', async (req, res) => {
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
+        footageCatalogs.clear();
         res.status(200).json({ success: true });
     } catch (error) {
         console.error('Error updating footage:', error);

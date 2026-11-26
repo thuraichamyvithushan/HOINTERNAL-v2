@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { auth } from '../../firebase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faPlay, faClock, faMicrochip, faVideoSlash, faLocationDot, faPaw, faTrash, faEdit, faXmark, faCheck, faUser, faImage, faImages, faChevronLeft, faChevronRight, faDownload } from '@fortawesome/free-solid-svg-icons';
 import { API_URL } from '../../config';
+import useFootageLibrary from '../influencer/useFootageLibrary';
+import FootagePagination from '../influencer/FootagePagination';
+import '../influencer/FootageUploadQueue.css';
 import { detectFootageKind } from '../../utils/uploadFootage';
 import './InfluencerDashboardNZ.css';
 
@@ -36,10 +39,16 @@ const ViewFootageNZ = ({
 }) => {
     const { user } = useContext(AuthContext);
     const isAdmin = user?.role === 'admin';
-    const [videos, setVideos] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [visibleCount, setVisibleCount] = useState(8);
+    const [influencer, setInfluencer] = useState('');
+    const [date, setDate] = useState('');
+    const resultsRef = useRef(null);
+    const { videos, setVideos, loading, total, currentPage, pageCount, pendingPage, error, goToPage, reload } = useFootageLibrary({
+        userId: user?.uid,
+        ownerId: overrideUserId || user?.uid,
+        region: 'NZ',
+        isGlobal, visibilityFilter, refreshTrigger, searchTerm, searchByProductOnly, influencer, date
+    });
     const [selectedVideo, setSelectedVideo] = useState(null);
     const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
     const [isDownloading, setIsDownloading] = useState(false);
@@ -80,30 +89,7 @@ const ViewFootageNZ = ({
         }
     };
 
-    const fetchFootage = async () => {
-        if (!user) return;
-        try {
-            let url = isGlobal
-                ? `${API_URL}/api/footage/all?region=NZ`
-                : `${API_URL}/api/footage/${overrideUserId || user.uid}`;
 
-            if (visibilityFilter) {
-                const separator = url.includes('?') ? '&' : '?';
-                url += `${separator}visibility=${visibilityFilter}`;
-            }
-
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Failed to fetch');
-            const videoData = await response.json();
-
-            // Filter by NZ region if needed (assuming we use common collection)
-            setVideos(videoData);
-        } catch (error) {
-            console.error('Error fetching NZ videos:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleDelete = async (id) => {
         try {
@@ -244,28 +230,13 @@ const ViewFootageNZ = ({
         !!video?.uploadBatchId &&
         Number(video?.uploadBatchImageCount || 0) > 1;
 
-    const matchesSearch = (video) => {
-        const normalizedSearchTerm = searchTerm.toLowerCase();
-
-        if (searchByProductOnly) {
-            return (video.deviceName || '').toLowerCase().includes(normalizedSearchTerm);
-        }
-
-        return (video.deviceName || '').toLowerCase().includes(normalizedSearchTerm) ||
-            (video.species || '').toLowerCase().includes(normalizedSearchTerm) ||
-            (video.description || '').toLowerCase().includes(normalizedSearchTerm) ||
-            (video.location || '').toLowerCase().includes(normalizedSearchTerm);
-    };
-
     const buildDisplayItems = (items) => {
         const groupedBatchIds = new Set();
         const displayItems = [];
 
         items.forEach((item) => {
             if (!isMultiImageFolderCandidate(item)) {
-                if (matchesSearch(item)) {
-                    displayItems.push(item);
-                }
+                displayItems.push(item);
                 return;
             }
 
@@ -283,13 +254,7 @@ const ViewFootageNZ = ({
                 .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
             if (folderItems.length <= 1) {
-                if (matchesSearch(item)) {
-                    displayItems.push(item);
-                }
-                return;
-            }
-
-            if (!folderItems.some(matchesSearch)) {
+                displayItems.push(item);
                 return;
             }
 
@@ -377,22 +342,10 @@ const ViewFootageNZ = ({
     }, [selectedVideo]);
 
     useEffect(() => {
-        if (!user) return;
-        fetchFootage();
-        fetchUserDirectory();
-        setVisibleCount(8);
-        const intervalId = setInterval(fetchFootage, 15000);
-        return () => clearInterval(intervalId);
-    }, [user, refreshTrigger, isGlobal, visibilityFilter]);
+        if (user?.uid) fetchUserDirectory();
+    }, [user?.uid]);
 
-    const filteredVideos = buildDisplayItems(videos);
-
-    useEffect(() => {
-        setVisibleCount(8);
-    }, [searchTerm]);
-
-    const visibleVideos = filteredVideos.slice(0, visibleCount);
-    const hasMoreVideos = filteredVideos.length > visibleCount;
+    const visibleVideos = buildDisplayItems(videos);
     const activeViewerItem = selectedVideo?.isFolder
         ? getFolderItemAtIndex(selectedVideo, currentGalleryIndex)
         : selectedVideo;
@@ -646,17 +599,8 @@ const ViewFootageNZ = ({
         ? `Downloading ${Math.round(downloadProgress?.overallPercent || 0)}%`
         : 'Download';
 
-    if (loading) {
-        return (
-            <div className="loading-container">
-                <div className="spinner"></div>
-                <p className="loading-text">Scanning your archive...</p>
-            </div>
-        );
-    }
-
     return (
-        <div className="view-container animate-fade-in">
+        <div className="view-container animate-fade-in" ref={resultsRef}>
             {/* Search Header */}
             <div className="search-header">
                 <div className="search-box">
@@ -670,11 +614,30 @@ const ViewFootageNZ = ({
                     />
                 </div>
                 <div className="stats-badge">
-                    Total: <span className="stats-count">{filteredVideos.length}</span> Items
+                    Total: <span className="stats-count">{total}</span> Items
                 </div>
             </div>
 
-            {filteredVideos.length === 0 ? (
+            <div className="footage-library-filters">
+                {isGlobal && (
+                    <label>
+                        Influencer
+                        <select className="search-input" value={influencer} onChange={(event) => setInfluencer(event.target.value)}>
+                            <option value="">All influencers</option>
+                            {Object.values(userDirectory).sort((a, b) => (a.displayName || a.name || a.uid)
+                                .localeCompare(b.displayName || b.name || b.uid)).map((creator) => (
+                                <option key={creator.uid} value={creator.uid}>{creator.displayName || creator.name || creator.uid}</option>
+                            ))}
+                        </select>
+                    </label>
+                )}
+                <label>
+                    Upload date (UTC)
+                    <input className="search-input" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+                </label>
+            </div>
+            {error && <p role="alert">{error} <button type="button" onClick={reload}>Reload footage</button></p>}
+            {loading ? <p role="status">Loading footage…</p> : !error && visibleVideos.length === 0 ? (
                 <div className="empty-state">
                     <FontAwesomeIcon icon={faVideoSlash} size="4x" className="empty-icon" />
                     <h3 className="empty-title">No footage found</h3>
@@ -697,12 +660,9 @@ const ViewFootageNZ = ({
                                         loading="lazy"
                                     />
                                 ) : (
-                                    <video
-                                        className="thumbnail-img"
-                                        src={getMediaUrl(cardItem)}
-                                        muted
-                                        playsInline
-                                    />
+                                    <div className="footage-video-placeholder" aria-label="Video">
+                                        <FontAwesomeIcon icon={faPlay} />
+                                    </div>
                                 )}
                                 <div className="play-overlay">
                                     <FontAwesomeIcon icon={cardMediaKind === 'folder' ? faImages : (cardMediaKind === 'image' ? faImage : faPlay)} />
@@ -810,16 +770,8 @@ const ViewFootageNZ = ({
                 </div>
             )}
 
-            {hasMoreVideos && (
-                <div className="load-more-wrap">
-                    <button
-                        className="load-more-btn"
-                        onClick={() => setVisibleCount((prev) => prev + 8)}
-                    >
-                        Show More Footage
-                    </button>
-                </div>
-            )}
+            <FootagePagination currentPage={currentPage} pageCount={pageCount} pendingPage={pendingPage}
+                onPageChange={goToPage} resultsRef={resultsRef} />
 
             {editingVideo && createPortal(
                 <div className="modal-overlay" onClick={() => setEditingVideo(null)} style={{ zIndex: 999999 }}>
