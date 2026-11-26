@@ -3,12 +3,15 @@ import React, { useEffect, useRef } from 'react';
 const labels = {
     queued: 'Waiting',
     uploading: 'Uploading',
+    retrying: 'Retrying',
+    canceling: 'Canceling',
+    canceled: 'Canceled',
     saving: 'Saving',
     complete: 'Uploaded',
     failed: 'Failed'
 };
 
-export default function FootageUploadQueue({ files, items, uploading, inputId, onAdd, onRemove, onRetry, children }) {
+export default function FootageUploadQueue({ files, items, inputId, onAdd, onRemove, onRetry, onCancel, children }) {
     const queueRef = useRef(null);
     const hasStarted = items.length > 0;
 
@@ -45,12 +48,20 @@ export default function FootageUploadQueue({ files, items, uploading, inputId, o
                     <li key={item.id}>
                         <div className="footage-queue-details">
                             <strong>{item.file.name}</strong>
-                            <span>{labels[item.status]} · {item.progress}%</span>
-                            <progress value={item.progress} max="100" aria-label={`Upload progress for ${item.file.name}`} />
+                            <span>{labels[item.status]}{item.status !== 'canceled' && ` · ${item.progress}%`}</span>
+                            {item.status !== 'canceled' && (
+                                <div className="footage-progress-row">
+                                    <progress value={item.progress} max="100" aria-label={`Upload progress for ${item.file.name}`} />
+                                    {item.status === 'uploading' && (
+                                        <button type="button" className="footage-cancel-upload" aria-label={`Cancel upload for ${item.file.name}`}
+                                            onClick={() => onCancel(item.id)}><span aria-hidden="true">×</span></button>
+                                    )}
+                                </div>
+                            )}
                             {item.error && <span role="alert">{item.error}</span>}
                         </div>
-                        {item.status === 'failed' && (
-                            <button type="button" className="change-button" disabled={uploading}
+                        {['uploading', 'failed', 'canceled'].includes(item.status) && (
+                            <button type="button" className="change-button" aria-label={`Retry ${item.file.name}`}
                                 onClick={() => onRetry(item.id)}>Retry</button>
                         )}
                     </li>

@@ -82,7 +82,8 @@ const UploadFootageNZ = (props) => {
     if (queue.uploading) {
         uploadLabel = `Uploading… ${queue.progress}%`;
     } else if (uploading) {
-        uploadLabel = queue.items.some((item) => item.status === 'failed') ? 'Retry failed files above' : 'Upload complete';
+        uploadLabel = queue.items.some((item) => item.status === 'canceled') ? 'Batch finished' : 'Upload complete';
+        if (queue.items.some((item) => item.status === 'failed')) uploadLabel = 'Retry failed files above';
     }
 
     const submitButton = (
@@ -122,8 +123,8 @@ const UploadFootageNZ = (props) => {
 
             <form onSubmit={handleUpload} className="form-grid">
                 <div className="footage-picker">
-                    <FootageUploadQueue files={files} items={queue.items} uploading={queue.uploading}
-                        inputId="footage-picker-nz" onRetry={queue.retry}
+                    <FootageUploadQueue files={files} items={queue.items}
+                        inputId="footage-picker-nz" onRetry={queue.retry} onCancel={queue.cancel}
                         onAdd={(selected) => setFiles((current) => [...current, ...selected])}
                         onRemove={(index) => setFiles((current) => current.filter((_, i) => i !== index))}>
                         {uploading && submitButton}

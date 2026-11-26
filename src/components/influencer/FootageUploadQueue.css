@@ -62,7 +62,33 @@
 
 .footage-queue-details progress {
     width: 100%;
+    min-width: 0;
     accent-color: #16a34a;
+}
+
+.footage-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.footage-cancel-upload {
+    display: grid;
+    flex: 0 0 44px;
+    place-items: center;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #9f1616;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.footage-cancel-upload:hover {
+    background: rgba(159, 22, 22, 0.08);
 }
 
 .footage-library-filters {

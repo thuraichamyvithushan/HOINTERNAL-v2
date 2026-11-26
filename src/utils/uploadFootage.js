@@ -39,15 +39,38 @@ export const detectFootageKind = (fileLike = {}) => {
 const getFallbackContentType = (fileKind) =>
   fileKind === 'image' ? 'image/jpeg' : 'video/mp4';
 
-const uploadFileToStorage = (item, onProgress) => new Promise((resolve, reject) => {
-  const task = storage.ref(item.storagePath).put(item.file, {
-    contentType: item.file.type || getFallbackContentType(item.fileKind)
-  });
+const uploadFileToStorage = async (item, update) => {
+  let restartRequested;
+  do {
+    restartRequested = false;
+    update({ status: 'uploading', progress: 0, bytesTransferred: 0, error: null });
+    try {
+      return await new Promise((resolve, reject) => {
+        const task = storage.ref(item.storagePath).put(item.file, {
+          contentType: item.file.type || getFallbackContentType(item.fileKind)
+        });
 
-  task.on('state_changed', ({ bytesTransferred, totalBytes }) => {
-    onProgress({ bytesTransferred, progress: totalBytes ? Math.round((bytesTransferred / totalBytes) * 100) : 0 });
-  }, reject, () => resolve(task.snapshot.ref));
-});
+        let stopping = false;
+        const stopTransfer = (restart) => {
+          if (!task.cancel()) return;
+          stopping = true;
+          restartRequested = restart;
+          update({ status: restart ? 'retrying' : 'canceling' });
+        };
+        item.stopTransfer = stopTransfer;
+        task.on('state_changed', ({ bytesTransferred, totalBytes }) => {
+          if (stopping || item.stopTransfer !== stopTransfer) return;
+          const progress = totalBytes ? Math.round((bytesTransferred / totalBytes) * 100) : 0;
+          update({ bytesTransferred, progress });
+        }, reject, () => resolve(task.snapshot.ref));
+      });
+    } catch (error) {
+      if (!restartRequested) throw error;
+    } finally {
+      delete item.stopTransfer;
+    }
+  } while (restartRequested);
+};
 
 export const createFootageBatch = (files, user, metadata) => {
   const collection = firestore.collection('footage');
@@ -97,31 +120,22 @@ const saveFootageMetadata = async (item) => {
   }
 };
 
-export const runFootageQueue = async (items, onChange) => {
-  const pending = items.values();
-  const worker = async () => {
-    for (const item of pending) {
-      const update = (changes) => {
-        Object.assign(item, changes);
-        onChange(item, changes);
-      };
+export const uploadFootageFile = async (item, onChange) => {
+  const update = (changes) => onChange(item, changes);
 
-      try {
-        if (!item.storageRef) {
-          update({ status: 'uploading', progress: 0, bytesTransferred: 0, error: null });
-          item.storageRef = await uploadFileToStorage(item, update);
-        }
-        update({ status: 'saving', progress: 100, bytesTransferred: item.file.size, error: null });
-        item.mediaUrl ||= await item.storageRef.getDownloadURL();
-        await saveFootageMetadata(item);
-        update({ status: 'complete' });
-      } catch (error) {
-        update({ status: 'failed', error: getUploadErrorMessage(error) });
-      }
+  try {
+    if (!item.storageRef) item.storageRef = await uploadFileToStorage(item, update);
+    update({ status: 'saving', progress: 100, bytesTransferred: item.file.size, error: null });
+    item.mediaUrl ||= await item.storageRef.getDownloadURL();
+    await saveFootageMetadata(item);
+    update({ status: 'complete' });
+  } catch (error) {
+    if (item.status === 'canceling' && error?.code === 'storage/canceled') {
+      update({ status: 'canceled', progress: 0, bytesTransferred: 0 });
+      return;
     }
-  };
-
-  await Promise.all([worker(), worker()]);
+    update({ status: 'failed', error: getUploadErrorMessage(error) });
+  }
 };
 
 export const getUploadErrorMessage = (error) => {
